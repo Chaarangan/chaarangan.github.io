@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SELF } from 'cloudflare:test';
-import { resetDb, req } from './helpers';
+import { resetStorage, req } from './helpers';
 
-beforeEach(resetDb);
+beforeEach(resetStorage);
 
 function clap(slug: string, count: number) {
   return SELF.fetch(req('/claps', {

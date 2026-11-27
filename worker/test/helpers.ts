@@ -15,12 +15,15 @@ const SCHEMA = [
 ];
 
 // D1's exec() splits on newlines, which mangles multi-line DDL. Running each
-// statement through prepare() lets the schema stay readable here.
-export async function resetDb() {
+// statement through prepare() lets the schema stay readable here. The KV reset
+// is needed because @cloudflare/vitest-plugin keeps storage across tests in a file.
+export async function resetStorage() {
   for (const stmt of SCHEMA) await env.DB.prepare(stmt).run();
   await env.DB.prepare('DELETE FROM comments').run();
   await env.DB.prepare('DELETE FROM claps').run();
   await env.DB.prepare('DELETE FROM medium').run();
+  const { keys } = await env.RATE.list();
+  await Promise.all(keys.map((k) => env.RATE.delete(k.name)));
 }
 
 export const SITE = 'https://chaarangan.github.io';

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SELF, env } from 'cloudflare:test';
-import { resetDb, req } from './helpers';
+import { resetStorage, req } from './helpers';
 
-beforeEach(resetDb);
+beforeEach(resetStorage);
 
 async function seed(id: string, name = 'Ada', slug = 'post-a') {
   await env.DB.prepare(
