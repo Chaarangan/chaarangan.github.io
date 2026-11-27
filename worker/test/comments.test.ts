@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SELF, env } from 'cloudflare:test';
-import { resetDb, req } from './helpers';
+import { resetStorage, req } from './helpers';
 import { stubOutbound } from './outbound';
 
-beforeEach(async () => { await resetDb(); stubOutbound(true); });
+beforeEach(async () => { await resetStorage(); stubOutbound(true); });
 afterEach(() => { vi.restoreAllMocks(); });
 
 function post(body: Record<string, unknown>) {

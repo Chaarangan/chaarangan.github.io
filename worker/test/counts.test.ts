@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SELF } from 'cloudflare:test';
-import { resetDb, req, SITE } from './helpers';
+import { resetStorage, req, SITE } from './helpers';
 import { stubOutbound } from './outbound';
 import { MAX_SLUGS } from '../src/counts';
 
-beforeEach(async () => { await resetDb(); stubOutbound(true); });
+beforeEach(async () => { await resetStorage(); stubOutbound(true); });
 afterEach(() => { vi.restoreAllMocks(); });
 
 const TOKEN = 'test-admin-token';

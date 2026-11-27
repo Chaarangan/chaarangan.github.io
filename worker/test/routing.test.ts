@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SELF } from 'cloudflare:test';
-import { resetDb, req, SITE } from './helpers';
+import { resetStorage, req, SITE } from './helpers';
 
-beforeEach(resetDb);
+beforeEach(resetStorage);
 
 describe('routing and CORS', () => {
   it('answers preflight for the site origin', async () => {

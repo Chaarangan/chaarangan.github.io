@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SELF } from 'cloudflare:test';
-import { resetDb, req } from './helpers';
+import { resetStorage, req } from './helpers';
 
-beforeEach(resetDb);
+beforeEach(resetStorage);
 
 const TOKEN = 'test-admin-token';
 const URL_A = 'https://medium.com/@me/post-abc123';
