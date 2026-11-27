@@ -1,0 +1,11 @@
+#### OUTPUT ####
+  item                                          value
+  --------------------------------------------------------
+  hardware                        Apple M3 Max, 36 GB
+  models downloaded                           30.2 GB
+  model invocations                         about 450
+  experiments                                       5
+  wall clock, measurement runs                12m 40s
+  daemon restarts, to vary NUM_PARALLEL             2
+  hypotheses written down in advance                2
+  hypotheses that survived                          0

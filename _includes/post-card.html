@@ -1,0 +1,62 @@
+{%- comment -%}
+  One row in any post list. The ONLY definition of listing markup -- /blog/,
+  every tag page, and the homepage teaser all render through this, so they
+  cannot drift.
+
+  Params:
+    post      (required) the post object
+    compact   (optional) "true" drops the excerpt and tags, for the teaser
+{%- endcomment -%}
+{%- assign words = include.post.content | number_of_words -%}
+{%- assign minutes = words | divided_by: 200 | plus: 1 -%}
+<li class="post-item">
+    <div class="post-meta">
+        <time datetime="{{ include.post.date | date_to_xmlschema }}">{{ include.post.date | date: "%b %-d, %Y" }}</time>
+        <span>·</span>
+        <span>{{ minutes }} min read</span>
+        {%- if include.post.updated %}
+        <span>·</span>
+        <span>updated {{ include.post.updated | date: "%b %Y" }}</span>
+        {%- endif %}
+    </div>
+    <h3><a href="{{ include.post.url | relative_url }}">{{ include.post.title }}</a></h3>
+    {%- unless include.compact %}
+    <p class="post-excerpt">{{ include.post.description | default: include.post.excerpt | strip_html | normalize_whitespace | truncate: 180 }}</p>
+    <div class="post-card-foot">
+        {%- comment -%}
+          This site's own claps and comment count, filled by assets/js/site.js
+          and hidden until they arrive. Not Medium's numbers: those belong to the
+          post they were counted on and stay on the post page.
+
+          The API base and the slug ride on this element rather than on the
+          enclosing <ul>, because /blog/, every tag page and the homepage teaser
+          all render through this one file -- putting them on the list would mean
+          repeating them in three templates that could then disagree.
+        {%- endcomment -%}
+        <span class="post-stats" hidden
+              data-stats-api="{{ site.comments.api }}"
+              data-stats-slug="{{ include.post.url }}">
+            <span class="post-stat" data-stat="claps" hidden>{% include icon-clap.html %}<span class="post-stat-n">0</span></span>
+            <span class="post-stat" data-stat="comments" hidden>{% include icon-comment.html %}<span class="post-stat-n">0</span></span>
+        </span>
+        {%- comment -%}
+          Medium's tally for a cross-posted article, labelled so 45 claps earned
+          over there is never read as 45 earned here. Text rather than a link:
+          the row's job is to get a reader into the post, and the title and the
+          tags are enough competition for that click already.
+        {%- endcomment -%}
+        <span class="post-stats post-stats-medium" hidden>
+            <span class="post-stats-label">Medium</span>
+            <span class="post-stat" data-stat="claps" hidden>{% include icon-clap.html %}<span class="post-stat-n">0</span></span>
+            <span class="post-stat" data-stat="responses" hidden>{% include icon-comment.html %}<span class="post-stat-n">0</span></span>
+        </span>
+        {%- if include.post.tags and include.post.tags != empty %}
+        <div class="post-tags">
+            {%- for tag in include.post.tags %}
+            <a href="{{ '/blog/tags/' | append: tag | append: '/' | relative_url }}">{{ tag }}</a>
+            {%- endfor %}
+        </div>
+        {%- endif %}
+    </div>
+    {%- endunless %}
+</li>

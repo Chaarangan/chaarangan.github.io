@@ -1,0 +1,18 @@
+---
+layout: default
+---
+{%- assign posts = site.tags[page.tag] -%}
+<section class="card">
+    <h2>Blogs <span class="more"><a href="{{ '/blog/' | relative_url }}">All posts →</a></span></h2>
+    <p class="blog-intro">
+        {{ posts.size }} post{% if posts.size != 1 %}s{% endif %} tagged <strong>{{ page.tag }}</strong>.
+    </p>
+
+    <ul class="post-list">
+        {%- for post in posts %}
+        {% include post-card.html post=post %}
+        {%- else %}
+        <li class="empty">No posts with this tag.</li>
+        {%- endfor %}
+    </ul>
+</section>

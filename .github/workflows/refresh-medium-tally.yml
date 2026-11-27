@@ -1,0 +1,162 @@
+name: Refresh Medium tally
+
+# Pushes Medium's clap and response counts for a cross-posted article to the
+# comments Worker, which serves them back beside the site's own numbers on the
+# post page. Run it by hand from the Actions tab whenever the numbers on Medium
+# have moved: type two integers, no shell, no token on your laptop.
+#
+# The numbers are typed rather than scraped because Medium exposes no way to read
+# them -- the write API is retired, RSS carries neither, both hydrate
+# client-side, and medium.com answers a scripted request with 403 from Cloudflare
+# bot management. A runner is no better placed to fetch them than a Worker is, so
+# the operator reads them off the page. The full reasoning is in worker/README.md
+# under "Medium's claps and responses".
+#
+# Nothing here touches the repository. The tally lives in D1, so this workflow
+# neither commits nor rebuilds the site -- which is why it needs no pull request
+# dance of the kind update-stats.yml does for main's signature rules.
+
+on:
+  workflow_dispatch:
+    inputs:
+      claps:
+        description: "Claps shown on the Medium article"
+        required: true
+        type: number
+      responses:
+        description: "Responses shown on the Medium article (0 if none)"
+        required: false
+        default: 0
+        type: number
+      slug:
+        description: "Post path on this site, both slashes"
+        required: true
+        default: "/blog/a-per-token-cost-of-zero-is-not-a-cost-of-zero/"
+        type: string
+      url:
+        description: "Medium URL -- only needed the first time a post is pushed"
+        required: false
+        default: ""
+        type: string
+
+# Two runs at once would race to overwrite the same row, and the loser's numbers
+# would win. Queue them instead of cancelling: a superseded run is still a real
+# refresh someone asked for.
+concurrency:
+  group: refresh-medium-tally
+  cancel-in-progress: false
+
+# Only to check out _config.yml for the API base. This workflow writes nothing
+# to the repository.
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Push the tally
+        env:
+          # Same token as /admin?token=... -- the one setup.sh printed, not the
+          # placeholder in worker/.dev.vars.
+          ADMIN_TOKEN: ${{ secrets.COMMENTS_ADMIN_TOKEN }}
+          CLAPS: ${{ inputs.claps }}
+          RESPONSES: ${{ inputs.responses }}
+          SLUG: ${{ inputs.slug }}
+          MEDIUM_URL: ${{ inputs.url }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ADMIN_TOKEN}" ]; then
+            echo "::error::COMMENTS_ADMIN_TOKEN is not set on this repository."
+            exit 1
+          fi
+
+          # Read the API base from the site config rather than repeating it here,
+          # so this workflow and the rendered pages cannot end up pointing at
+          # different Workers. grep and sed rather than a YAML parser: the block
+          # is three lines with no quoting or anchors to get wrong, and this runs
+          # identically on a laptop, which is how it was tested.
+          API=$(grep -A5 '^comments:' _config.yml | sed -n 's/^[[:space:]]*api:[[:space:]]*//p' | head -1)
+          if [ -z "$API" ]; then
+            echo "::error::no comments.api found in _config.yml"
+            exit 1
+          fi
+
+          # workflow_dispatch hands every input over as a string, type: number or
+          # not, so the shape is checked here. A stray character would otherwise
+          # reach the Worker, be rejected as absent, and quietly store null --
+          # publishing "Also on Medium" in place of a count.
+          for pair in "claps:$CLAPS" "responses:$RESPONSES"; do
+            name=${pair%%:*}
+            value=${pair#*:}
+            if ! printf '%s' "$value" | grep -Eq '^[0-9]+$'; then
+              echo "::error::$name must be a whole number, got '$value'"
+              exit 1
+            fi
+          done
+
+          # Base 10 explicitly: a pasted "045" is a valid whole number above and
+          # would otherwise reach jq as invalid JSON, or be read as octal.
+          CLAPS=$((10#$CLAPS))
+          RESPONSES=$((10#$RESPONSES))
+
+          ENCODED=$(printf '%s' "$SLUG" | jq -sRr @uri)
+
+          # The row is replaced wholesale rather than patched, so the URL has to
+          # go up with every refresh. Rather than keeping a second copy of it in
+          # this file -- which would go stale the day a post is re-published --
+          # reuse whatever is already stored, and require the input only when
+          # there is nothing to reuse.
+          if [ -z "$MEDIUM_URL" ]; then
+            MEDIUM_URL=$(curl -sS --fail-with-body \
+              -H "Origin: https://chaarangan.github.io" \
+              "$API/thread?slug=$ENCODED" | jq -r '.medium.url // ""')
+          fi
+          if [ -z "$MEDIUM_URL" ]; then
+            echo "::error::no Medium URL stored for $SLUG. Pass the url input on the first push for a post."
+            exit 1
+          fi
+
+          BODY=$(jq -n \
+            --arg slug "$SLUG" --arg url "$MEDIUM_URL" \
+            --argjson claps "$CLAPS" --argjson responses "$RESPONSES" \
+            '{slug: $slug, url: $url, claps: $claps, responses: $responses}')
+
+          # --fail-with-body so a 401 or a 400 fails the run and still prints what
+          # the Worker said about it. The response is the stored row, which is
+          # worth having in the log, so it is not discarded.
+          echo "Pushing $CLAPS claps and $RESPONSES responses for $SLUG"
+          curl -sS --fail-with-body -X POST "$API/medium" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            -d "$BODY"
+          echo
+
+          # Read back through the public endpoint, which is what a reader's
+          # browser will get. A run that says "done" without this would be
+          # reporting that the request was accepted, not that the page changed.
+          STORED=$(curl -sS --fail-with-body \
+            -H "Origin: https://chaarangan.github.io" \
+            "$API/thread?slug=$ENCODED" | jq '.medium')
+
+          {
+            echo "### Medium tally for \`$SLUG\`"
+            echo
+            echo '```json'
+            echo "$STORED"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # A count of 0 is stored as null on purpose, so the page can render
+          # "45 claps on Medium" with no "and 0 responses" tail. That is why the
+          # expected value is not simply the input.
+          if [ "$CLAPS" -eq 0 ]; then EXPECTED=null; else EXPECTED=$CLAPS; fi
+          ACTUAL=$(echo "$STORED" | jq -r '.claps')
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::read-back shows $ACTUAL claps, expected $EXPECTED"
+            exit 1
+          fi
+          echo "Stored and verified."

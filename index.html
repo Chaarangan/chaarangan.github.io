@@ -1,0 +1,135 @@
+---
+layout: home
+title: Charangan Vasantharajan
+updated: 2026-11-22
+description: >-
+  Charangan Vasantharajan, Engineering Manager, AI Platform Architecture, at Iterate.ai in
+  Toronto. Sole architect of Generate, an enterprise agentic AI platform that runs in the
+  cloud, on-prem, and air-gapped, and leads the team that builds it. 5 US patent
+  applications, MASc from McMaster University.
+keywords: >-
+  Charangan Vasantharajan, Engineering Manager, AI Platform Architecture, Enterprise AI,
+  Agentic AI, Agent Infrastructure, Permission-Aware Retrieval, Air-Gapped AI, Sandboxed
+  Execution, Multi-Agent Systems, LangGraph, MCP, RAG, AI-Native SDLC, Spec-Driven
+  Development, Engineering Leadership, Iterate.ai, Generate, NetApp, McMaster University
+---
+        <section class="card" id="about">
+            <h2>About</h2>
+            <p class="headline">I architect the AI platform that runs agents over a company's private data, from the cloud to sites with no network at all.</p>
+            <p class="lede">The platform is <em>Generate</em>, at <a href="https://www.iterate.ai/" target="_blank" rel="noopener">Iterate.ai</a>. I own its architecture and roadmap with the CTO, and I lead the engineering team that builds it.</p>
+            <div class="stats">
+                <div class="stat"><div class="num">400<span class="u">TB+</span></div><div class="lbl">searched in place at p95 under 1&nbsp;s</div></div>
+                <div class="stat"><div class="num">99.8<span>%</span></div><div class="lbl">uptime at 50K+ requests/s</div></div>
+                <div class="stat"><div class="num">5</div><div class="lbl">US patent applications</div></div>
+                <div class="stat"><div class="num">261<span>+</span></div><div class="lbl"><a href="#research">citations</a></div></div>
+            </div>
+            <p class="tagline">Generate won Pinnacle and TMC AI Product of the Year (2025).</p>
+        </section>
+
+        <section class="card" id="now">
+            <h2>What I work on now</h2>
+            <p>Most of my time goes to three problems. The first is search that respects each user's file permissions over hundreds of terabytes of customer storage on NetApp ONTAP, without copying the data into a vector index. The second is the agent runtime: sandboxes, memory that outlasts the context window, and policies an admin can attach to any agent or workflow. The third is shipping all of it to sites with no network at all, down to STIG-hardened, FIPS-enabled RHEL.</p>
+        </section>
+
+        <section class="card" id="generate">
+            <h2>Case study: Generate <span class="more"><a href="https://www.iterate.ai/" target="_blank" rel="noopener">Iterate.ai →</a></span></h2>
+            <p>I've owned Generate's architecture and roadmap since it was an edge app on Intel AI PCs. It is now multi-tenant SaaS, on-prem, and air-gapped, from one codebase.</p>
+            <figure class="arch" aria-label="Generate architecture: three platform services, installed by Generate Sentinel into cloud, on-prem, and air-gapped environments from one codebase.">
+                <div class="arch-platform">
+                    <div class="arch-cap">Generate · one codebase</div>
+                    <div class="arch-row">
+                        <div class="arch-box"><b>Permission-aware search</b><span>400 TB+, p95 under 1 s</span><span>read in place, ACLs first</span></div>
+                        <div class="arch-box"><b>Agent runtime</b><span>gVisor or Kata per session</span><span>graph memory, approvals</span></div>
+                        <div class="arch-box"><b>Governance</b><span>versioned policies and DLP</span><span>every model certified first</span></div>
+                    </div>
+                </div>
+                <div class="arch-link"></div>
+                <div class="arch-bar"><b>Generate Sentinel</b> · one-command install and release, online or air-gapped</div>
+                <div class="arch-link"></div>
+                <div class="arch-row">
+                    <div class="arch-box"><b>Cloud SaaS</b><span>AWS: EKS, MSK, Aurora, Neptune, FSx for ONTAP</span></div>
+                    <div class="arch-box"><b>On-prem</b><span>customer clusters and OpenShift</span></div>
+                    <div class="arch-box"><b>Air-gapped</b><span>RHEL 9, DISA STIG, FIPS, no outbound network</span></div>
+                </div>
+            </figure>
+            <ul class="awards">
+                <li><span class="badge">Constraint</span><span class="txt"><b>Some customers can't send a single document out.</b> <span>Air-gapped installs had to keep every feature, including for a U.S. Federal Defense Agency.</span></span></li>
+                <li><span class="badge">Decision</span><span class="txt"><b>Search files where they live.</b> <span>Permission-aware search reads storage in place and checks each user's NFSv4 ACLs first. It answers over 400 TB+ at p95 under 1 second, with no embeddings and no content index. Patent pending.</span></span></li>
+                <li><span class="badge">Decision</span><span class="txt"><b>Isolate every agent session.</b> <span>Each one runs in its own gVisor or Kata sandbox, so a compromised session can't reach another tenant. Versioned policies and DLP attach to any project, agent, or workflow.</span></span></li>
+                <li><span class="badge">Decision</span><span class="txt"><b>Install with one command, anywhere.</b> <span>I built Generate Sentinel, which installs the full stack online or air-gapped and publishes releases from GitHub Actions through OIDC roles into AWS.</span></span></li>
+                <li><span class="badge">Trade-off</span><span class="txt"><b>Every model is certified before it serves.</b> <span>Each AI service binds to its own model, which costs a compatibility run per model and keeps vendor failures out of production.</span></span></li>
+                <li><span class="badge">Outcome</span><span class="txt"><b>99.8% uptime at 50,000+ requests/second.</b> <span>Consolidating services cut infrastructure cost 33% and made the platform 4× faster.</span></span></li>
+                <li><span class="badge">Outcome</span><span class="txt"><b>In production across industries.</b> <span>Healthcare claims and remittance through Cerner, launched with IBM and <a href="https://www.ibm.com/new/product-blog/accelerating-revenue-recovery-for-healthcare-with-generate-by-iterate-ai" target="_blank" rel="noopener">Hutchinson Regional Healthcare</a>. Scheduled retail agents at Vuori. Storage editions with <a href="https://iterate.ai/partners/netapp" target="_blank" rel="noopener">NetApp</a>.</span></span></li>
+                <li><span class="badge">Recognition</span><span class="txt"><b>Pinnacle and TMC AI Product of the Year (2025).</b> <span>Iterate.ai made the CRN AI 100 in 2026.</span></span></li>
+            </ul>
+        </section>
+
+        <section class="card" id="writing">
+            <h2>Writing &amp; talks <span class="more"><a href="{{ '/blog/' | relative_url }}">All posts →</a></span></h2>
+            <ul class="awards">
+                <li><span class="badge">Blog</span><span class="txt"><b><a href="{{ '/blog/stopping-ai-agents-from-skipping-steps/' | relative_url }}">Stopping AI agents from skipping steps, with one file that runs anywhere</a></b></span></li>
+                <li><span class="badge">Blog</span><span class="txt"><b><a href="{{ '/blog/a-per-token-cost-of-zero-is-not-a-cost-of-zero/' | relative_url }}">A per-token cost of zero is not a cost of zero</a></b></span></li>
+                <li><span class="badge">Talk</span><span class="txt"><b><a href="https://www.linkedin.com/feed/update/urn:li:activity:7198382880387944448/" target="_blank" rel="noopener">Intel Vision 2024 keynote demo</a></b><span> of an Outlook RAG plugin with 85% time savings.</span></span></li>
+            </ul>
+        </section>
+
+        <section class="card" id="research">
+            <h2>Research, patents &amp; open source <span class="more"><a href="https://scholar.google.com/citations?hl=en&user=-tDp1vUAAAAJ" target="_blank" rel="noopener"><span data-stat="citations">261</span> citations →</a></span></h2>
+            <p class="oneline"><strong>Google Scholar:</strong> h-index <span data-stat="h_index">7</span> · i10-index <span data-stat="i10_index">6</span></p>
+
+            <div class="sub">Patents (5 US applications, pending)</div>
+            <ul class="awards">
+                <li><span class="badge">Search</span><span class="txt"><b>Systems and Methods for Permission Aware File Search</b></span></li>
+                <li><span class="badge">Agents</span><span class="txt"><b>Creating AI Agents and Routes</b><span>, and <b>Generating AI Workflows</b> (2025)</span></span></li>
+                <li><span class="badge">LLMs</span><span class="txt"><b>Fine Tuning of Large Language Models</b><span> (2025)</span></span></li>
+                <li><span class="badge">Docs</span><span class="txt"><b>Language Independent Textual Extraction</b><span>, US App. 18/590,347 (2024)</span></span></li>
+            </ul>
+
+            <div class="sub">Selected publications</div>
+            <p class="oneline"><a href="http://hdl.handle.net/11375/31596" target="_blank" rel="noopener">SciRAG</a> (MASc thesis, 2025) · <a href="https://aclanthology.org/2023.ranlp-1.116.pdf" target="_blank" rel="noopener">Party extraction from legal contracts</a> (RANLP 2023) · <a href="https://ieeexplore.ieee.org/abstract/document/9980157" target="_blank" rel="noopener">MedBERT</a> (APSIPA ASC 2022)</p>
+
+            <div class="sub">Open source</div>
+            <ul class="awards">
+                <li><span class="badge">MCP</span><span class="txt"><b><a href="https://github.com/Chaarangan/stepgate" target="_blank" rel="noopener">Stepgate</a></b><span>: shows an agent one step at a time and moves on only when mechanical checks pass. <span data-stat="gh_stars">15</span> stars, <span data-stat="gh_forks">2</span> forks, <span data-stat="npm_downloads">1,600</span> downloads.</span></span></li>
+                <li><span class="badge">Model</span><span class="txt"><b><a href="https://huggingface.co/Charangan/MedBERT" target="_blank" rel="noopener">MedBERT</a></b><span>: biomedical language model for named entity recognition. <span data-stat="hf_downloads">570,498</span> downloads on Hugging Face.</span></span></li>
+                <li><span class="badge">PyPI</span><span class="txt"><b><a href="https://github.com/Chaarangan/NERP" target="_blank" rel="noopener">NERP</a></b><span>: Python framework for transformer-based named entity recognition. <span data-stat="pypi_downloads">72,672</span> downloads.</span></span></li>
+            </ul>
+            <p class="oneline"><a href="{{ '/research/' | relative_url }}">All publications, patents, and BibTeX →</a></p>
+        </section>
+
+        <section class="card" id="leadership">
+            <h2>How I lead</h2>
+            <div class="comp"><b>Review the spec, not the diff</b><span>I moved the team from Windsurf to Claude Code. Every change starts as a written spec, and AI writes the code. A task that took 4 to 5 weeks ships in one, and merged PRs are up 65% to 95%.</span></div>
+            <div class="comp"><b>One engineer, end to end</b><span>One monorepo, with specs in issues and releases tagged on merge, so an engineer and their agents own a feature from spec to release.</span></div>
+            <div class="comp"><b>Grow leaders from inside</b><span>I doubled the team in a year with 6 hires and promoted 2 engineers to Senior Applied AI Engineer. A former intern now owns the agents platform.</span></div>
+            <div class="comp"><b>Stay close to the problem</b><span>I write requirements with customers and with partner engineers at IBM, NetApp, and Intel, and defend the design in their architecture reviews.</span></div>
+        </section>
+
+        <section class="card" id="experience">
+            <h2>Experience <span class="more"><a href="https://www.linkedin.com/in/charangan/" target="_blank" rel="noopener">Full history on LinkedIn →</a></span></h2>
+            <div class="entry">
+                <div class="erow"><h3>Engineering Manager, AI Platform Architecture</h3><span class="m">Sep 2024 to Present</span></div>
+                <p class="org">Iterate.ai, Toronto, ON</p>
+                <ul><li>Architect of Generate and lead of the team that builds it. Owns the roadmap with the CTO.</li></ul>
+            </div>
+            <div class="entry">
+                <div class="erow"><h3>Data Scientist</h3><span class="m">Nov 2023 to Sep 2024</span></div>
+                <p class="org">Iterate.ai, Canada</p>
+                <ul><li>Built Generate from scratch as private document search for Intel AI PCs, <b>shipped to 10,000+ units</b> through the <a href="https://softwareoffer.intel.com/Promo/AIPC_SMB" target="_blank" rel="noopener">Intel Software Advantage Program</a>.</li></ul>
+            </div>
+            <div class="entry">
+                <div class="erow"><h3>Earlier ML engineering and research</h3><span class="m">2021 to 2023</span></div>
+                <p class="org">ExentAI, Simplyfai, Nanyang Technological University</p>
+                <ul><li>Multilingual OCR over <b>65,000+ historical newspapers</b>, machine fault prediction that cut unplanned downtime <b>67%</b>, and MedBERT at NTU.</li></ul>
+            </div>
+            <div class="sub">Education</div>
+            <ul class="awards">
+                <li><span class="badge">2025</span><span class="txt"><b>MASc, Electrical &amp; Computer Engineering</b><span>, McMaster University, on a Graduate Research Scholarship.</span></span></li>
+                <li><span class="badge">2023</span><span class="txt"><b>BSc Eng (Hons.), Computer Science &amp; Engineering</b><span>, University of Moratuwa. First Class Honours.</span></span></li>
+            </ul>
+        </section>
+
+        <section class="card" id="contact">
+            <h2>Contact</h2>
+            <p>I'm in Toronto. If you're building agent infrastructure or enterprise AI that has to run on hardware you own, I'd like to hear about it. Email <a href="mailto:charangan@iterate.ai">charangan@iterate.ai</a>, message me on <a href="https://www.linkedin.com/in/charangan/" target="_blank" rel="noopener">LinkedIn</a>, or <a href="https://calendar.app.google/xwhCMxhquiDgJYUL7" target="_blank" rel="noopener" onclick="trackEvent('Engagement','click','Schedule Meeting Contact')">book a time</a>.</p>
+        </section>

@@ -1,0 +1,7 @@
+#### OUTPUT ####
+  model               resident     decode  out-tok     gpu  overhead % of gpu
+  ----------------------------------------------------------------------------
+  qwen3:1.7b             2.4GB     147t/s    0.52x   1.45x              59.1%
+  qwen3:4b               3.9GB      78t/s    0.58x   1.46x              59.3%
+  gemma3:4b              3.9GB      80t/s    0.60x   1.59x              61.4%
+  qwen3.5:35b-a3b       23.3GB      60t/s    0.38x   1.12x              52.8%

@@ -1,0 +1,60 @@
+# https://chaarangan.github.io/robots.txt
+#
+# Personal site of Charangan Vasantharajan. Everything served here is meant to be
+# found, indexed, and quoted -- by search engines and by AI assistants alike.
+#
+# The AI crawlers below are allowed *explicitly* rather than by omission. Some of
+# them resolve an absent rule conservatively, and an explicit rule also states the
+# intent plainly to anyone who reads this file.
+
+User-agent: *
+Allow: /
+
+# Search
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+# Answer engines and AI training/retrieval crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+Sitemap: https://chaarangan.github.io/sitemap.xml

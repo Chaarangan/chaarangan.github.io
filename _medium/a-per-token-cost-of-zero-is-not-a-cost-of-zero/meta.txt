@@ -1,0 +1,34 @@
+title:     A per-token cost of zero is not a cost of zero
+subtitle:  Memory, evaluation, and guardrail calls took 53% to 61% of the GPU across four models but only 27% to 37% of the output tokens. On hardware you own, the first number is the one that predicted the throughput I measured one session at a time.
+tags:      [agents, on-prem, inference]
+canonical: https://chaarangan.github.io/blog/a-per-token-cost-of-zero-is-not-a-cost-of-zero/
+
+Import (keeps SEO on your own domain):
+  medium.com/p/import  ->  https://chaarangan.github.io/blog/a-per-token-cost-of-zero-is-not-a-cost-of-zero/
+
+Or paste article.html and set the canonical link by hand:
+  story settings (...) -> More settings -> Advanced settings
+
+Figures to upload (4):
+  1. images/01-gpu-seconds-per-step-split-into-prefill-and-deco.png
+     Compaction cost the same as answering the question, and wrote half as much.
+  2. images/02-overhead-to-functional-ratio-measured-in-output.png
+     Every model puts the two measures on opposite sides of break-even.
+  3. images/03-prefill-time-per-repetition-for-append-only-vers.png
+     The only difference between the two lines is where a few tokens were inserted.
+  4. images/04-sessions-per-minute-against-concurrency-for-four.png
+     The harnessed path tracks the clean one to four sessions, then falls back while the clean one keeps going.
+
+Code blocks to re-add (9), see blocks.txt:
+  1. blocks/01-two-accounting-methods-opposite-conclusions.txt  (49 cols)
+  2. blocks/02-two-accounting-methods-opposite-conclusions.txt  (80 cols)
+  3. blocks/03-the-same-three-sessions-on-three-more-models.txt  (78 cols)
+  4. blocks/04-the-share-i-expected-to-climb-and-it-did-not.txt  (56 cols)
+  5. blocks/05-compaction-pays-twice.txt  (70 cols)
+  6. blocks/06-batching-hides-the-harness-until-the-box-saturat.txt  (68 cols)
+  7. blocks/07-resident-memory-is-weights-plus-a-reservation-yo.txt  (56 cols)
+  8. blocks/08-the-35b-with-more-room-for-context-than-the-4b.txt  (56 cols)
+  9. blocks/09-what-it-cost-to-find-out.txt  (58 cols)
+
+Medium has no tables. Each block goes in a Medium code block:
+  ``` on an empty line (or Cmd-Option-6), paste with Cmd-Shift-V

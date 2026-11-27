@@ -1,0 +1,31 @@
+---
+layout: default
+title: Blogs
+nav: blog
+description: Notes on enterprise AI, agent systems, retrieval, edge inference, and leading the teams that ship them.
+permalink: /blog/
+---
+<section class="card">
+    <h2>Blogs <span class="more"><a href="{{ '/feed.xml' | relative_url }}">RSS →</a></span></h2>
+    <p class="blog-intro">{{ page.description }}</p>
+
+    <ul class="post-list">
+        {%- for post in paginator.posts %}
+        {% include post-card.html post=post %}
+        {%- else %}
+        <li class="empty">No posts yet.</li>
+        {%- endfor %}
+    </ul>
+
+    {%- if paginator.total_pages > 1 %}
+    <nav class="pager" aria-label="Pagination">
+        {%- if paginator.previous_page %}
+        <a href="{{ paginator.previous_page_path | relative_url }}">← Newer</a>
+        {%- endif %}
+        <span class="pos">Page {{ paginator.page }} of {{ paginator.total_pages }}</span>
+        {%- if paginator.next_page %}
+        <a href="{{ paginator.next_page_path | relative_url }}">Older →</a>
+        {%- endif %}
+    </nav>
+    {%- endif %}
+</section>

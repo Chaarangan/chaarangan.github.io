@@ -1,0 +1,12 @@
+[
+ {
+  "n": 1,
+  "file": "01-how-a-stepgate-run-works-the-agent-sees-one-step.png",
+  "caption": "The agent never sees step 2 until step 1's gates pass, and never holds the API key."
+ },
+ {
+  "n": 2,
+  "file": "02-the-vin-stepfile-before-and-after-four-agent-ste.png",
+  "caption": "Twelve of the fifteen gates checked work the model no longer does."
+ }
+]

@@ -1,0 +1,5 @@
+#### THE CATALOG, AS FIRST WRITTEN ####
+Lines, counted as block-style YAML: 16247
+Share of lines: {"gates":"53%","produces":"15%","tools":"14%","instructions":"8%","other":"11%"}
+Filters over calls by tool: 145
+Predicates reading: {"calls":106,"steps_or_inputs":110,"output_only":45}

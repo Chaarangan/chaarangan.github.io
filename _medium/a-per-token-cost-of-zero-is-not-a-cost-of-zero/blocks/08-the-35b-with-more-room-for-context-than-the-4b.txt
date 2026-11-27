@@ -1,0 +1,6 @@
+#### OUTPUT ####
+  model               num_ctx   resident   over weights
+  ------------------------------------------------------
+  qwen3.5:35b-a3b        2048     23.1GB          0.1GB
+  qwen3.5:35b-a3b        8192     23.3GB          0.3GB
+  qwen3.5:35b-a3b       32768     23.8GB          0.8GB

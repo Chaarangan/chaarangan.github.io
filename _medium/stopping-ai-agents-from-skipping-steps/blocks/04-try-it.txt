@@ -1,0 +1,2 @@
+npx -y stepgate --list                 # the catalog
+npx -y stepgate auto-claim-vin-validation

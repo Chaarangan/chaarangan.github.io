@@ -1,0 +1,129 @@
+# Charangan Vasantharajan
+
+> Engineering Manager, AI Platform Architecture, at Iterate.ai in Toronto, Canada.
+> He is the architect of Generate, Iterate.ai's enterprise agentic AI platform, and leads
+> the team that builds it. Generate won AI Product of the Year from both Pinnacle and TMC in 2025.
+
+Canonical page: https://chaarangan.github.io/
+
+## Experience
+
+**Engineering Manager, AI Platform Architecture, Iterate.ai** (Sep 2024 to present)
+
+- Architect of Generate since it was an edge app; owns its architecture, roadmap (with the
+  CTO), and cloud and tooling budget, and leads the cross-functional team that builds it.
+- Invented permission-aware file search that answers over 400 TB+ of enterprise storage at
+  p95 under 1 second with no embeddings and no content index. Files are read in place on
+  NetApp ONTAP and Amazon FSx for NetApp ONTAP, under NFSv4 ACLs resolved through Active
+  Directory and Microsoft Entra Domain Services. US patent application pending. It is the
+  core of Generate's storage editions with NetApp (https://iterate.ai/partners/netapp).
+- Built the agent runtime: LangGraph workflows with human-in-the-loop approval, a gVisor or
+  Kata sandbox per agent session, graph memory on Neo4j or Amazon Neptune, and each AI
+  service bound to its own certified model. Versioned policies and DLP attach to any
+  project, agent, or workflow.
+- Delivered an air-gapped install for a U.S. Federal Defense Agency on DISA STIG-hardened RHEL 9
+  with FIPS enabled.
+- Designed and built Generate Sentinel, the release plane: one-command online and
+  air-gapped installs, customer entitlements, and releases published from GitHub Actions
+  through OIDC roles into AWS.
+- Shipped healthcare revenue-cycle work (X12 835/837 claims and remittance, a Cerner
+  integration) and launched Generate through IBM with Hutchinson Regional Healthcare,
+  featured in IBM's product blog. Built scheduled assortment and retail-audit agents for
+  Vuori.
+- Runs the team AI-native. 100% of production code is written by AI under spec-driven
+  development, and his review sits on the spec and the architecture. A task that took 4 to
+  5 weeks now ships in a week, and merged PRs are up 65% to 95%.
+- Doubled the team in a year: 6 hires, 2 promotions to Senior Applied AI Engineer.
+- Works with partner engineers at IBM, NetApp, Intel, AMD, and HP.
+
+**Data Scientist, Iterate.ai** (Nov 2023 to Sep 2024)
+
+- Built Generate from scratch as private document search for Intel AI PCs, shipped to
+  10,000+ units through the Intel Software Advantage Program.
+- Built an Outlook RAG plugin (85% time savings, 92% satisfaction), demoed at the Intel
+  Vision 2024 keynote.
+
+**Earlier** (2021 to 2023): ML Research Engineer at ExentAI (multilingual OCR over 65,000+
+historical newspapers) and engineering intern at Simplyfai (fault prediction on machinery
+sensor data). Research intern at Nanyang Technological University, where he pre-trained
+MedBERT.
+
+## What Generate is
+
+An enterprise agentic AI platform for agents, workflows, and search over a company's
+private data. One codebase deploys to AWS (EKS, MSK, Aurora, Neptune), customer-managed
+on-prem and OpenShift, and air-gapped RHEL. Air-gapped installs keep the full feature set
+with no outbound network, and that constraint shaped most design decisions.
+
+- **Search where the data lives.** Permission-aware file search reads storage in place.
+- **Sandboxed execution.** Each agent session runs in its own sandbox, so a compromised
+  session cannot reach another tenant.
+- **Agent memory past the context window.** Graph memory carries user context across 30 to
+  40 minute sessions and compacts the working context as it fills.
+- **Governance.** Every model passes a compatibility suite before it serves a platform AI
+  service; policies and DLP attach to projects, agents, and workflows.
+- **Distribution.** Generate Sentinel installs online or air-gapped with one command.
+- **Scale and cost.** 99.8% uptime at 50,000+ requests/second peak. Consolidation and
+  connection pooling cut infrastructure cost 33% and improved performance 4x.
+
+## Recognition
+
+- CRN AI 100 (2026): Iterate.ai named among the Top 20 Hottest AI Software Companies
+- Pinnacle AI Product of the Year (2025), awarded to Generate
+- TMC Generative AI Product of the Year (2025), awarded to Generate
+- McMaster Graduate Research Scholarship (2023)
+- Top 5 Finalist, HPCIC Innovation Challenge (2022), team Medispeech@NTU
+
+## Patents (5 US applications, pending)
+
+- Systems and Methods for Permission Aware File Search
+
+- System and Method for Fine Tuning of Large Language Models (2025)
+- Apparatuses, Systems, and Methods for Creating Artificial Intelligence Agents and Routes (2025)
+- Apparatuses, Systems, and Methods for Generating AI Workflows (2025)
+- Language Independent Textual Extraction, US App. 18/590,347 (2024)
+
+## Research
+
+Google Scholar: 261+ citations, h-index 7, i10-index 6.
+
+- [SciRAG: A Retrieval-Focused Fine-Tuning Strategy for Scientific Documents](http://hdl.handle.net/11375/31596), MASc thesis, McMaster University, 2025
+- [MedBERT: A Pre-trained Language Model for Biomedical Named Entity Recognition](https://ieeexplore.ieee.org/abstract/document/9980157), APSIPA ASC, 2022
+- [Party Extraction from Legal Contract Using Contextualized Span Representations of Parties](https://aclanthology.org/2023.ranlp-1.116.pdf), RANLP, 2023
+- [TamilEmo: Fine-grained Emotion Detection Dataset for Tamil](https://link.springer.com/chapter/10.1007/978-3-031-33231-9_3), Springer, 2022
+- [Adapting the Tesseract OCR Engine for Tamil and Sinhala Legacy Fonts](https://ieeexplore.ieee.org/abstract/document/9961304), IALP, 2022
+- [Towards Offensive Language Identification for Tamil Code-Mixed YouTube Comments and Posts](https://link.springer.com/article/10.1007/s42979-021-00977-y), SN Computer Science, 2021
+
+## Open source
+
+- [Stepgate](https://github.com/Chaarangan/stepgate): MCP server that shows an agent one step at a time and moves on only when mechanical checks pass; 1,400+ npm downloads
+- [MedBERT](https://huggingface.co/Charangan/MedBERT): biomedical language model for named entity recognition; 570,000+ Hugging Face downloads
+- [NERP](https://github.com/Chaarangan/NERP): Python framework for transformer-based named entity recognition; 72,000+ PyPI downloads
+- [Tamizhi-Net OCR](https://github.com/aaivu/Tamizhi-Net-OCR): LSTM-enhanced Tesseract models for Tamil and Sinhala legacy fonts
+- [TamilEmo](https://competitions.codalab.org/competitions/36396): 60,000-sentence fine-grained emotion dataset for Tamil
+
+## Education
+
+- MASc, Electrical & Computer Engineering, McMaster University (2023 to 2025). Thesis:
+  SciRAG, advised by Prof. Thia Kirubarajan.
+- BSc Engineering (Hons.), Computer Science & Engineering, University of Moratuwa
+  (2018 to 2023). First Class Honours. Thesis: party extraction from legal contracts
+  (RANLP 2023).
+
+## Areas of expertise
+
+Agent infrastructure and runtimes; permission-aware retrieval over large file storage;
+air-gapped, STIG and FIPS delivery; engineering leadership; AI-native, spec-driven
+engineering teams; enterprise AI architecture; RAG; multi-agent orchestration; agent runtimes and memory;
+air-gapped and on-prem AI deployment; edge inference and model quantization; document
+intelligence; multi-tenant isolation and ACL-aware retrieval; sandboxed execution of
+model-generated code; event-driven microservices.
+
+## Links
+
+- [LinkedIn](https://www.linkedin.com/in/charangan/)
+- [GitHub](https://github.com/chaarangan)
+- [Google Scholar](https://scholar.google.com/citations?hl=en&user=-tDp1vUAAAAJ)
+- [Hugging Face](https://huggingface.co/Charangan)
+- [Medium](https://charangan.medium.com)
+- Email: charangan@iterate.ai

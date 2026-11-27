@@ -1,0 +1,4 @@
+#### THE CATALOG NOW ####
+Lines, counted as block-style YAML: 12397
+Share of lines: {"gates":"12%","mechanical":"30%","produces":"19%","tools":"18%","instructions":"4%","other":"17%"}
+Filters over calls by tool: 2

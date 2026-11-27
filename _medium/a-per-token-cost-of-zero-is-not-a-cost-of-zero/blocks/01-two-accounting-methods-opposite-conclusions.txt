@@ -1,0 +1,13 @@
+@dataclass
+class Call:
+    cls: str          # "functional" | "overhead"
+    step: str
+    ...
+    prompt_tokens: int
+    output_tokens: int
+    prefill_s: float
+    decode_s: float
+
+    @property
+    def gpu_s(self) -> float:
+        return self.prefill_s + self.decode_s

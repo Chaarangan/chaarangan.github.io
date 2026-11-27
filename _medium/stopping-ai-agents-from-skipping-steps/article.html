@@ -1,0 +1,214 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Stopping AI agents from skipping steps, with one file that runs anywhere</title>
+<style>
+body{max-width:700px;margin:40px auto;padding:0 20px;font:18px/1.6 Georgia,serif;color:#182420}
+h1{font:700 34px/1.2 -apple-system,Helvetica,sans-serif}
+h2{font:700 24px/1.3 -apple-system,Helvetica,sans-serif;margin-top:2em}
+pre{background:#f6f8f7;padding:14px;overflow-x:auto;font:13px/1.45 ui-monospace,Menlo,monospace}
+code{font:0.88em ui-monospace,Menlo,monospace;background:#f2f6f4;padding:1px 4px}
+pre code{background:none;padding:0}
+em{color:#586761}
+</style></head><body>
+<h1>Stopping AI agents from skipping steps, with one file that runs anywhere</h1>
+<p><strong>Stepgate is an MCP server that shows an agent one step at a time and moves on only when mechanical checks pass, so it cannot skip a step or fake a result. A stepfile is one portable file that runs in any MCP client. Measuring its checks showed most of them were doing work the model should never have been doing.</strong></p>
+
+        <p>An AI agent given a procedure as text decides how much of it to follow. It drops
+a step, calls the task done, and leaves no record of what it ran. In τ²-bench’s
+single-control domains, a claimed success the environment does not show accounts
+for 45% to 48% of failures, and no LLM judge in that study scored above 0.65
+AUROC at catching it (<a href="https://arxiv.org/abs/2606.09863">Advani, 2026</a>). Another
+study found that 27% to 78% of the successes benchmarks report hide a procedural
+violation (<a href="https://arxiv.org/abs/2603.03116">Cao, Driouich and Thomas, 2026</a>).</p>
+
+<p><a href="https://github.com/Chaarangan/stepgate">Stepgate</a> is the MCP server I built to
+stop that, and the name is the design: a gate at every step. The procedure is a
+YAML stepfile. When it runs, Stepgate shows the client’s agent only the current
+step, makes every API call itself, and moves on only when that step’s gates
+pass. The agent cannot skip ahead, because it is not told the next step exists
+until the current one passes, and it cannot declare a step done, because a step
+passes only when its gates pass over what it submitted.</p>
+
+<p>A gate is a mechanical check (JSON Schema, a JSONLogic rule, an HTTP verifier,
+or a person’s approval) and never a model’s opinion. Because Stepgate makes the
+calls, a gate can compare what the model submitted with what the API returned,
+which is how a fabricated value gets caught. That makes the path through a
+procedure deterministic, within limits worth being exact about. Given the same
+inputs, the same submissions and the same API responses, a run takes the same
+path: the steps run in the same order, and every gate gives the same verdict.
+What the model submits still varies, and so does anything a person approves.</p>
+
+
+<p style="padding:24px;background:#fafafa;border:1px dashed #bbb;text-align:center;color:#555">UPLOAD IMAGE 1: images/01-how-a-stepgate-run-works-the-agent-sees-one-step.png</p>
+<p><em>The agent never sees step 2 until step 1's gates pass, and never holds the API key.</em></p>
+
+
+<p>The second goal was portability. I wanted an agent I could hand to anyone: one
+file, with no packages, runtime or versions to install, that runs in whatever AI
+client the other person already uses, with the model they already pay for. MCP,
+the Model Context Protocol that clients such as Claude Code and Cursor use to
+call tools, makes that possible, because a server that speaks it plugs into all
+of them. So the stepfile is the whole agent. It names no model, provider or
+framework, calls only remote APIs, and declares the credentials it needs without
+saying where they live, so whoever runs it supplies their own keys.</p>
+
+<p>That is also what separates a stepfile from a workflow engine such as n8n. An
+n8n workflow runs inside an n8n server, with the model and keys configured
+there. A stepfile travels to the agent: anyone runs it with <code class="language-plaintext highlighter-rouge">npx -y stepgate</code> in
+the client they already use, and its gates come with it.</p>
+
+<p>Two more properties come from Stepgate making every call. The model never holds
+an API key, because Stepgate attaches credentials itself and sends requests only
+to the hosts the stepfile declares. And every run writes a hash-chained ledger
+of each step, tool call, gate verdict and retry, so editing a record afterwards
+breaks the chain, which <code class="language-plaintext highlighter-rouge">stepgate --verify</code> detects.</p>
+
+<h2 id="half-of-every-stepfile-was-checking">Half of every stepfile was checking</h2>
+
+<p>Stepgate ships with a catalog of eighteen stepfiles: CVE triage, a 10-K ratio
+extraction, a regulatory monitor, a Zendesk-to-Jira escalation and so on. I
+wrote a script to count where their lines go, and the answer was uncomfortable:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#### THE CATALOG, AS FIRST WRITTEN ####
+Lines, counted as block-style YAML: 16247
+Share of lines: {"gates":"53%","produces":"15%","tools":"14%","instructions":"8%","other":"11%"}
+Filters over calls by tool: 145
+Predicates reading: {"calls":106,"steps_or_inputs":110,"output_only":45}
+</code></pre></div></div>
+
+<p>Gates were 53% of the catalog and instructions were 8%. The same filter (“the
+successful results of this operation”) was written out by hand 145 times, and
+110 of the 261 predicate gates compared the output with the inputs or an earlier
+step. Reading through them, most were not checking judgement. They checked that
+the model had copied a value correctly, counted a list correctly, or done a sum
+correctly.</p>
+
+<p>The clearest case checks the vehicle on an insurance claim against its VIN. It
+decodes the VIN with NHTSA’s vPIC service and compares the claimed make and
+model with the decode, ignoring letter case. The model did the comparison, and
+a gate redid it by lowercasing both strings with a 26-branch <code class="language-plaintext highlighter-rouge">if</code>, one branch
+per letter of the alphabet. Four agent steps and 372 lines, mostly proving that
+the model could copy fields out of JSON and compare two strings.</p>
+
+<p>That is backwards. A model is slow at copying and unreliable at arithmetic, and
+each of those steps cost tokens, sometimes a retry, and a gate few people could
+review. None of it needed judgement.</p>
+
+<h2 id="the-model-judges-the-server-computes">The model judges, the server computes</h2>
+
+<p>A stepfile has two kinds of step. An agent step has instructions, and the model
+does it. A mechanical step has <code class="language-plaintext highlighter-rouge">do</code> instead: Stepgate makes the listed calls,
+with arguments built from the inputs and earlier outputs, and computes the
+step’s output from a template. The client never sees a mechanical step. The VIN
+decode is one:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">id</span><span class="pi">:</span> <span class="s">decode</span>
+  <span class="na">do</span><span class="pi">:</span>
+    <span class="na">calls</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="pi">{</span> <span class="nv">id</span><span class="pi">:</span> <span class="nv">decode</span><span class="pi">,</span> <span class="nv">operation</span><span class="pi">:</span> <span class="nv">decodeVin</span><span class="pi">,</span> <span class="nv">arguments</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">vin</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">var</span><span class="pi">:</span> <span class="nv">inputs.vin</span> <span class="pi">}</span> <span class="pi">}</span> <span class="pi">}</span>
+    <span class="na">output</span><span class="pi">:</span>
+      <span class="na">make</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">var</span><span class="pi">:</span> <span class="nv">responses.decode.Results.0.Make</span> <span class="pi">}</span>
+      <span class="na">model</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">var</span><span class="pi">:</span> <span class="nv">responses.decode.Results.0.Model</span> <span class="pi">}</span>
+      <span class="na">model_year</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">var</span><span class="pi">:</span> <span class="nv">responses.decode.Results.0.ModelYear</span> <span class="pi">}</span>
+</code></pre></div></div>
+
+<p>When only part of an agent step is a computation, such as a count, a derived
+field covers it: Stepgate fills the field in after the model submits, so the
+model is never asked for it and no gate has to check it.</p>
+
+<p>The VIN stepfile is now four mechanical steps (decode, compare, recalls,
+verdict) and one agent step, the summary for the claims handler, in 242 lines.
+Against the live NHTSA APIs, the VIN decodes to a 2009 Toyota Prius with six
+recalls, the claim says a 2010 Camry, and the verdict is <code class="language-plaintext highlighter-rouge">refer</code>, with no field
+touched by the model. Its one job is the prose, and the gates on that prose
+check it against those values. A summary citing a recall campaign that was never
+returned is rejected by name.</p>
+
+
+<p style="padding:24px;background:#fafafa;border:1px dashed #bbb;text-align:center;color:#555">UPLOAD IMAGE 2: images/02-the-vin-stepfile-before-and-after-four-agent-ste.png</p>
+<p><em>Twelve of the fifteen gates checked work the model no longer does.</em></p>
+
+
+<p>The whole catalog works this way now:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#### THE CATALOG NOW ####
+Lines, counted as block-style YAML: 12397
+Share of lines: {"gates":"12%","mechanical":"30%","produces":"19%","tools":"18%","instructions":"4%","other":"17%"}
+Filters over calls by tool: 2
+</code></pre></div></div>
+
+<p>This did more for determinism than any gate. A mechanical step returns the
+same output for the same API responses every time, so each step moved out of
+the model is one less place for a run to vary.</p>
+
+<p>The files went from 8,547 lines to 6,321, and gates from 53% to 12%. I trust
+that second number less than it looks, because much of the gate logic did not
+disappear. It moved into the <code class="language-plaintext highlighter-rouge">do</code> templates, which are JSONLogic too, and gates
+and templates together are still 42% of the catalog. The model does far less.
+The stepfile is only somewhat easier to read.</p>
+
+<h2 id="writes-wait-for-a-person">Writes wait for a person</h2>
+
+<p>Six of the stepfiles write something: a Jira issue, a Gmail draft, a monday.com
+item, a note on a Zendesk ticket or a ServiceNow incident. Each follows the same
+shape. An agent step drafts exactly what will be written, a person approves it,
+and a mechanical step performs the write from the approved output. The write
+step can read only inputs and earlier outputs, never a fresh API response, so
+what reaches Jira is what the person saw.</p>
+
+<p>The approval travels as an MCP elicitation, a form the client shows. Not every
+client shows it. Testing from the Claude Code extension in VS Code, every
+approval came back declined within a millisecond of the submission, which is not
+a human reaction time: the extension declares the capability and then declines
+without drawing the form (<a href="https://github.com/anthropics/claude-code/issues/79174">#79174</a>).
+The same test in a terminal session came back approved 5.8 seconds after the
+submit. Stepgate cannot tell those two declines apart, so it reports only that
+the approval was declined, and the docs name the clients that work.</p>
+
+<h2 id="where-this-stops-being-true">Where this stops being true</h2>
+
+<p>Running a stepfile still needs Node.js 22.18 or later wherever Stepgate itself
+runs, so “no dependencies” is true of the file and not of the machine. Every
+number here comes from one catalog of eighteen stepfiles that I wrote, so
+the 53% says as much about how I wrote gates as about gates in general. The
+eleven public-data stepfiles pass against their live APIs with qwen3.6-35b-a3b
+through OpenRouter. The six that write were checked only against recorded
+cases, because I do not have accounts on those services.</p>
+
+<p>The bigger limit is JSONLogic. Inside a <code class="language-plaintext highlighter-rouge">map</code> or <code class="language-plaintext highlighter-rouge">filter</code>, an expression sees
+only the current item, so anything that needs outer data turns into a <code class="language-plaintext highlighter-rouge">reduce</code>
+carrying context or a <code class="language-plaintext highlighter-rouge">join</code> against a one-element list. Sorting and date
+arithmetic are both awkward today. Those gaps are open as proposals in the
+<a href="https://github.com/Chaarangan/stepgate/issues">issue tracker</a>, with the largest
+being CEL expressions as strings beside JSONLogic. CEL’s specification guarantees
+that an expression terminates, which matters when the file is untrusted.</p>
+
+<h2 id="try-it">Try it</h2>
+
+<p>Stepgate is on npm and the MCP Registry, and any MCP client can run it:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>npx <span class="nt">-y</span> stepgate <span class="nt">--list</span>                 <span class="c"># the catalog</span>
+npx <span class="nt">-y</span> stepgate auto-claim-vin-validation
+</code></pre></div></div>
+
+<p>If you already have a procedure written down as a skill or a runbook,
+<code class="language-plaintext highlighter-rouge">stepgate_outline</code> turns it into a skeleton stepfile, with each rule it states
+(“never”, “must”) listed as a gate still to write. The
+<a href="https://github.com/Chaarangan/stepgate">repository</a> has the format reference,
+the catalog, and the script behind both measurement blocks.</p>
+
+<p>Moving work out of the model also made the agent more portable. A step Stepgate
+computes behaves the same whichever model the client runs, so the fewer steps a
+model does, the less a stepfile’s behaviour depends on where it lands. The path
+through a stepfile and every step that needs no judgement are deterministic, as
+long as the APIs return the same data. Only the judgement travels with the
+model.</p>
+
+<p>The 53% was my own doing, but I doubt the pattern is mine alone. Ask a model to
+do mechanical work and you end up writing checks to catch it, and each of those
+checks needs a retry budget and a reviewer who can read it. If I were reviewing
+a team’s agent design, the first question I would ask is which values the model
+produces that code could compute. Every one of those is cheaper to move into
+code than to guard. Most of mine should never have been the model’s job.</p>
+
+</body></html>

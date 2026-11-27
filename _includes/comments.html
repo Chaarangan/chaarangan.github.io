@@ -1,0 +1,64 @@
+{%- comment -%}
+  Claps and comments, both anonymous.
+
+  The store is the Worker in worker/, not a third-party service: readers post
+  with no account, and Turnstile plus per-IP rate limits are what stand in for
+  a login. Anything backed by GitHub Discussions would have required one.
+
+  The widget is our own DOM rather than an iframe, so it inherits the theme
+  tokens directly -- there is nothing to repaint when the toggle flips, which is
+  why the themechange event this file once listened for is gone again.
+
+  Everything below renders empty and is filled by assets/js/comments.js. A
+  reader with no JavaScript, or an API that is down, gets the fallback line and
+  a post that is otherwise untouched.
+{%- endcomment -%}
+{%- if site.comments.api and page.comments != false -%}
+<section class="comments card"
+         data-comments-api="{{ site.comments.api }}"
+         data-comments-slug="{{ page.url }}"
+         data-turnstile-key="{{ site.comments.turnstile_site_key }}">
+
+    <div class="claps">
+        <button type="button" class="clap-btn" aria-label="Applaud this post">
+            {% include icon-clap.html %}
+            <span class="clap-count">0</span>
+        </button>
+        <span class="clap-hint">no account needed</span>
+        {%- comment -%}
+          Medium's counts sit beside ours rather than being added to them. They
+          are not the same unit: a clap here is capped at 20 per reader and
+          deduplicated on a hashed IP, a clap there is up to 50 per signed-in
+          account with no such check, so one total would blend two scales and
+          measure nothing.
+
+          Empty and hidden because it arrives with the thread, not the page.
+          Medium exposes no way to read either number -- the write API is gone,
+          RSS omits both, they hydrate client-side, and medium.com sits behind
+          bot management that 403s a scripted request -- so the author pushes
+          them to POST /medium and the Worker hands them back with the claps.
+        {%- endcomment -%}
+        <a class="medium-tally" hidden rel="noopener"></a>
+    </div>
+
+    <h2>Comments</h2>
+    <ol class="comment-list"></ol>
+    <p class="comment-empty" hidden>No comments yet. Yours would be the first.</p>
+
+    <form class="comment-form" hidden>
+        <div class="cf-row">
+            <label>Name<input type="text" name="name" maxlength="60" required autocomplete="name"></label>
+            <label>Email <span class="opt">optional, never shown</span><input type="email" name="email" maxlength="120" autocomplete="email"></label>
+        </div>
+        <label class="cf-body">Comment<textarea name="body" maxlength="2000" rows="4" required></textarea></label>
+        <div class="cf-turnstile" data-sitekey="{{ site.comments.turnstile_site_key }}"></div>
+        <div class="cf-actions">
+            <button type="submit">Post comment</button>
+            <span class="comment-status" role="status"></span>
+        </div>
+    </form>
+
+    <p class="comments-fallback">Comments need JavaScript.</p>
+</section>
+<script src="{{ '/assets/js/comments.js' | relative_url }}" defer></script>
+{%- endif -%}

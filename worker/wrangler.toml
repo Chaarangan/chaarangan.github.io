@@ -1,0 +1,23 @@
+name = "chaarangan-comments"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+# Required by @cloudflare/vitest-pool-workers, which runs the test harness
+# itself inside workerd and needs Node built-ins to do it. The Worker code
+# below uses only web APIs, so this costs nothing at runtime.
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "production"
+
+# Both ids below are dummies that setup.sh overwrites with the real ones it
+# creates under your Cloudflare account. They are not left empty because
+# wrangler refuses to parse a blank id, and they do no harm locally: Miniflare
+# simulates both bindings and never looks the ids up.
+[[d1_databases]]
+binding = "DB"
+database_name = "chaarangan-comments"
+database_id = "35c7f051-16dc-4d1c-bac8-94265ae57071"
+
+[[kv_namespaces]]
+binding = "RATE"
+id = "65781527bfe34ed88cea02ec691bae15"

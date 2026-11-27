@@ -1,0 +1,22 @@
+{%- comment -%}
+  Share links.
+
+  url_encode, not uri_escape: uri_escape leaves ":" and "/" literal, which
+  happens to work today but breaks the moment a shared URL carries its own query
+  string. url_encode percent-encodes the whole value, which is what a query
+  parameter actually requires.
+
+  Each platform builds its preview by fetching the URL, so a post that is not yet
+  deployed will share as a bare link with no card. LinkedIn in particular cannot
+  be given prefilled text at all -- it renders whatever the page's Open Graph
+  tags say, which _includes/head.html emits per post.
+{%- endcomment -%}
+{%- assign share_url = page.url | absolute_url | url_encode -%}
+{%- assign share_title = page.title | url_encode -%}
+<div class="share">
+    <span class="share-label">Share</span>
+    <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ share_url }}" target="_blank" rel="noopener" onclick="trackEvent('Share','click','LinkedIn — {{ page.title | escape }}')">LinkedIn</a>
+    <a href="https://x.com/intent/post?url={{ share_url }}&amp;text={{ share_title }}" target="_blank" rel="noopener" onclick="trackEvent('Share','click','X — {{ page.title | escape }}')">X</a>
+    <a href="https://news.ycombinator.com/submitlink?u={{ share_url }}&amp;t={{ share_title }}" target="_blank" rel="noopener" onclick="trackEvent('Share','click','HN — {{ page.title | escape }}')">Hacker News</a>
+    <button type="button" data-copy-link="{{ page.url | absolute_url }}">Copy link</button>
+</div>

@@ -1,0 +1,13 @@
+---
+layout: default
+---
+{%- comment -%}
+  A thin pass-through over `default`. It earns its keep as a discriminator:
+  `page.layout == 'home'` is what marks the Home link active in the sidebar and
+  selects the sections rail in _includes/rail.html.
+
+  The homepage carried a "recent writing" teaser here for a while. It was removed
+  once /blog/ existed as a real page reached from the sidebar -- the teaser was a
+  second, staler route to the same place.
+{%- endcomment -%}
+{{ content }}

@@ -1,0 +1,150 @@
+{%- comment -%}
+  One <head> for every page. Title/description/image come from front matter and
+  fall back to the site defaults, so a page only overrides what differs. The
+  Person schema stays on the homepage; posts emit BlogPosting instead.
+{%- endcomment -%}
+{%- assign t = page.title | default: site.title -%}
+{%- if page.url == '/' -%}
+  {%- assign page_title = 'Charangan Vasantharajan | Engineering Manager, AI Platform Architecture' -%}
+{%- else -%}
+  {%- assign page_title = t | append: ' | Charangan Vasantharajan' -%}
+{%- endif -%}
+{%- assign desc = page.description | default: page.excerpt | default: site.description | strip_html | normalize_whitespace | truncate: 300 -%}
+{%- assign img = page.image | default: '/images/charangan-vasantharajan.jpg' | absolute_url -%}
+{%- assign canonical = page.url | replace: 'index.html', '' | absolute_url -%}
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EBH0514W57"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-EBH0514W57', {
+        'send_page_view': true,
+        'allow_enhanced_conversions': true
+    });
+    function trackEvent(category, action, label) {
+        gtag('event', action, {
+            'event_category': category,
+            'event_label': label
+        });
+    }
+</script>
+
+<title>{{ page_title }}</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="author" content="Charangan Vasantharajan">
+{%- if page.keywords %}
+<meta name="keywords" content="{{ page.keywords }}">
+{%- elsif page.tags and page.tags != empty %}
+<meta name="keywords" content="Charangan Vasantharajan, {{ page.tags | join: ', ' }}">
+{%- endif %}
+{%- assign blog_page = false -%}
+{%- if page.nav == 'blog' or page.layout == 'post' %}{% assign blog_page = true %}{% endif -%}
+{%- if blog_page and site.blog_visible != true %}
+<meta name="robots" content="noindex,nofollow">
+{%- else %}
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+{%- endif %}
+<meta name="description" content="{{ desc }}">
+
+<!-- Open Graph -->
+<meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}website{% endif %}">
+<meta property="og:url" content="{{ canonical }}">
+<meta property="og:title" content="{{ page_title }}">
+<meta property="og:description" content="{{ desc }}">
+<meta property="og:image" content="{{ img }}">
+{%- if page.layout == 'post' %}
+<meta property="article:published_time" content="{{ page.date | date_to_xmlschema }}">
+{%- if page.updated %}<meta property="article:modified_time" content="{{ page.updated | date_to_xmlschema }}">{% endif %}
+{%- for tag in page.tags %}<meta property="article:tag" content="{{ tag }}">{% endfor %}
+{%- endif %}
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="{{ canonical }}">
+<meta property="twitter:title" content="{{ page_title }}">
+<meta property="twitter:description" content="{{ desc }}">
+<meta property="twitter:image" content="{{ img }}">
+
+<link rel="canonical" href="{{ canonical }}">
+<link rel="alternate" type="application/rss+xml" title="{{ site.title }}" href="{{ '/feed.xml' | absolute_url }}">
+<link rel="icon" type="image/png" href="{{ '/images/favicon.png' | relative_url }}">
+<link rel="shortcut icon" type="image/png" href="{{ '/images/favicon.png' | absolute_url }}">
+<link href="{{ '/images/charangan-vasantharajan.jpg' | absolute_url }}" rel="apple-touch-icon">
+
+<link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}">
+<link rel="stylesheet" href="{{ '/assets/css/blog.css' | relative_url }}">
+
+{% if page.layout == 'post' -%}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": {{ page.title | jsonify }},
+    "description": {{ desc | jsonify }},
+    "image": {{ img | jsonify }},
+    "datePublished": "{{ page.date | date_to_xmlschema }}",
+    "dateModified": "{{ page.updated | default: page.date | date_to_xmlschema }}",
+    "author": {
+        "@type": "Person",
+        "name": "Charangan Vasantharajan",
+        "url": "https://chaarangan.github.io"
+    },
+    "publisher": {
+        "@type": "Person",
+        "name": "Charangan Vasantharajan",
+        "url": "https://chaarangan.github.io"
+    },
+    "mainEntityOfPage": { "@type": "WebPage", "@id": {{ canonical | jsonify }} },
+    "keywords": {{ page.tags | join: ", " | jsonify }},
+    "inLanguage": "en"
+}
+</script>
+{%- else -%}
+<script type="application/ld+json">
+{%- if page.layout == 'home' %}
+{
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    "dateModified": {{ page.updated | default: site.time | date_to_xmlschema | jsonify }},
+    "mainEntity":
+{%- endif %}
+{
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Charangan Vasantharajan",
+    "url": "https://chaarangan.github.io",
+    "image": "https://chaarangan.github.io/images/charangan-vasantharajan.jpg",
+    "jobTitle": "Engineering Manager, AI Platform Architecture",
+    "email": "mailto:charangan@iterate.ai",
+    "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Toronto",
+        "addressRegion": "ON",
+        "addressCountry": "CA"
+    },
+    "worksFor": {
+        "@type": "Organization",
+        "name": "Iterate.ai",
+        "url": "https://iterate.ai"
+    },
+    "alumniOf": [
+        { "@type": "CollegeOrUniversity", "name": "McMaster University" },
+        { "@type": "CollegeOrUniversity", "name": "University of Moratuwa" }
+    ],
+    "knowsAbout": ["Agentic AI", "AI Agent Infrastructure", "Permission-Aware Retrieval", "Air-Gapped AI Deployment", "Sandboxed Code Execution", "Multi-Agent Systems", "Large Language Models", "Engineering Leadership"],
+    "sameAs": [
+        "https://www.linkedin.com/in/charangan",
+        "https://github.com/chaarangan",
+        "https://scholar.google.com/citations?hl=en&user=-tDp1vUAAAAJ",
+        "https://huggingface.co/Charangan",
+        "https://charangan.medium.com"
+    ]
+}
+{%- if page.layout == 'home' %}
+}
+{%- endif %}
+</script>
+{%- endif %}

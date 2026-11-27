@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{% include head.html %}
+</head>
+
+<body>
+{%- comment -%}
+  Three columns on every page. The rail is a sibling of <main>, never a child of
+  the card, so the card holds the same 670px whatever the page is. What the rail
+  contains is decided inside the include.
+{%- endcomment -%}
+<div class="wrap">
+    {% include sidebar.html %}
+
+    <main>
+{{ content }}
+        <footer>© {{ 'now' | date: "%Y" }} Charangan Vasantharajan{% if page.updated %} · Updated {{ page.updated | date: "%-d %b %Y" }}{% endif %} · <a href="{{ '/llms.txt' | relative_url }}">llms.txt</a> · <a href="{{ '/feed.xml' | relative_url }}">RSS</a></footer>
+    </main>
+
+    {%- unless page.rail == false %}
+    {% include rail.html %}
+    {%- endunless %}
+</div>
+
+<script src="{{ '/assets/js/site.js' | relative_url }}"></script>
+</body>
+</html>

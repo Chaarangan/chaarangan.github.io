@@ -1,0 +1,8 @@
+- id: decode
+  do:
+    calls:
+      - { id: decode, operation: decodeVin, arguments: { vin: { var: inputs.vin } } }
+    output:
+      make: { var: responses.decode.Results.0.Make }
+      model: { var: responses.decode.Results.0.Model }
+      model_year: { var: responses.decode.Results.0.ModelYear }

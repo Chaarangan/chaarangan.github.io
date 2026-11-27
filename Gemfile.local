@@ -1,0 +1,32 @@
+# Local preview only. Never deployed, and deliberately NOT the same as Gemfile.
+#
+# Gemfile pins `github-pages`, which is what GitHub Pages actually builds with
+# (Jekyll 3.9). That gem cannot run here: it depends on commonmarker, which caps
+# at Ruby < 4.0, and the Ruby on this machine is 4.0.x. Bundler refuses to
+# resolve it, so a local `jekyll serve` against Gemfile is not possible.
+#
+# This file drives Jekyll 4 instead so `make serve` works today. The divergence
+# is real -- verify anything template-level against a deploy preview before
+# trusting it. Nothing here changes what GitHub Pages installs.
+source "https://rubygems.org"
+
+gem "jekyll", "~> 4.3.4"
+
+# Same four plugins as _config.yml, all on the GitHub Pages whitelist.
+group :jekyll_plugins do
+  gem "jekyll-feed"
+  gem "jekyll-sitemap"
+  gem "jekyll-seo-tag"
+  gem "jekyll-paginate"
+end
+
+# `jekyll serve` needs webrick on Ruby 3+; --livereload needs em-websocket.
+gem "webrick"
+gem "em-websocket"
+
+# Ruby 3.4 dropped these from the default gems.
+gem "csv"
+gem "base64"
+gem "bigdecimal"
+gem "logger"
+gem "ostruct"

@@ -1,0 +1,22 @@
+[
+ {
+  "n": 1,
+  "file": "01-gpu-seconds-per-step-split-into-prefill-and-deco.png",
+  "caption": "Compaction cost the same as answering the question, and wrote half as much."
+ },
+ {
+  "n": 2,
+  "file": "02-overhead-to-functional-ratio-measured-in-output.png",
+  "caption": "Every model puts the two measures on opposite sides of break-even."
+ },
+ {
+  "n": 3,
+  "file": "03-prefill-time-per-repetition-for-append-only-vers.png",
+  "caption": "The only difference between the two lines is where a few tokens were inserted."
+ },
+ {
+  "n": 4,
+  "file": "04-sessions-per-minute-against-concurrency-for-four.png",
+  "caption": "The harnessed path tracks the clean one to four sessions, then falls back while the clean one keeps going."
+ }
+]

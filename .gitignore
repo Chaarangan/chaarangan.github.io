@@ -1,0 +1,36 @@
+# Jekyll build output and local preview toolchain. GitHub Pages builds the site
+# itself, so neither of these belongs in the repo.
+_site/
+.gems/
+.jekyll-cache/
+.jekyll-metadata
+Gemfile.lock
+Gemfile.local.lock
+vendor/
+.sass-cache/
+.DS_Store
+.playwright-mcp/
+
+# Reference articles saved locally while writing. These are other people's
+# published work, and the repo root is served, so committing one would
+# republish it on the site.
+*.pdf
+
+# Worker toolchain: installed per machine, and .wrangler holds local D1/KV state
+worker/node_modules/
+worker/.wrangler/
+
+# Local Worker secrets
+worker/.dev.vars
+
+# Medium bundles are committed: article.html and the figure PNGs are what you
+# actually paste and upload, so they need to be reachable from any machine and
+# not only wherever `make medium` last ran. Only the scratch dir is ignored.
+_medium/*/.tmp/
+
+# Python bytecode from scripts/. Importing a module under scripts/ writes this,
+# which otherwise lands in a commit by accident.
+__pycache__/
+
+# Design specs and plans; they live in the private career repo, not here.
+docs/superpowers/

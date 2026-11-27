@@ -1,0 +1,157 @@
+host=http://localhost:11434  num_ctx=8192  OLLAMA_NUM_PARALLEL=1
+
+==================================================================================
+E1  per-model ledger: does the overhead share survive a change of model?
+==================================================================================
+
+  num_ctx pinned to 8192 for every model.
+
+  --- qwen3:1.7b ---
+
+  qwen3:1.7b
+  step        class       calls  in tok  out tok  prefill  decode   gpu s  % gpu
+  ------------------------------------------------------------------------------
+  answer      functional      3    4974      344     0.9s    2.4s    3.3s  33.4%
+  compact     overhead        3    4992      173     2.0s    1.3s    3.3s  33.1%
+  judge       overhead        3    5042        6     2.0s    0.0s    2.1s  20.9%
+  plan        functional      3     134      100     0.1s    0.6s    0.7s   7.5%
+  guard_out   overhead        3     125       48     0.1s    0.3s    0.4s   3.9%
+  guard_in    overhead        3     146        6     0.1s    0.0s    0.1s   1.3%
+
+  overhead:functional  calls 2.00x  in-tok 2.02x  out-tok 0.52x  gpu 1.45x   overhead = 59.1% of gpu
+
+  --- qwen3:4b ---
+
+  qwen3:4b
+  step        class       calls  in tok  out tok  prefill  decode   gpu s  % gpu
+  ------------------------------------------------------------------------------
+  answer      functional      3    4956      384     2.2s    5.3s    7.5s  30.6%
+  compact     overhead        3    4974      192     5.0s    2.5s    7.5s  30.3%
+  judge       overhead        3    5025       48     5.1s    0.6s    5.7s  23.3%
+  plan        functional      3     116      192     0.2s    2.2s    2.5s  10.1%
+  guard_in    overhead        3     128       48     0.2s    0.5s    0.7s   2.9%
+  guard_out   overhead        3     108       48     0.1s    0.6s    0.7s   2.8%
+
+  overhead:functional  calls 2.00x  in-tok 2.02x  out-tok 0.58x  gpu 1.46x   overhead = 59.3% of gpu
+
+  --- gemma3:4b ---
+
+  gemma3:4b
+  step        class       calls  in tok  out tok  prefill  decode   gpu s  % gpu
+  ------------------------------------------------------------------------------
+  compact     overhead        3    5067      192     4.5s    2.4s    6.9s  32.0%
+  answer      functional      3    5052      318     2.0s    4.1s    6.1s  28.3%
+  judge       overhead        3    5123       35     4.6s    0.4s    5.0s  23.3%
+  plan        functional      3     118      152     0.4s    1.8s    2.2s  10.3%
+  guard_out   overhead        3     110       48     0.2s    0.6s    0.8s   3.7%
+  guard_in    overhead        3     130        7     0.4s    0.1s    0.5s   2.3%
+
+  overhead:functional  calls 2.00x  in-tok 2.02x  out-tok 0.60x  gpu 1.59x   overhead = 61.4% of gpu
+
+  --- qwen3.5:35b-a3b ---
+
+  qwen3.5:35b-a3b
+  step        class       calls  in tok  out tok  prefill  decode   gpu s  % gpu
+  ------------------------------------------------------------------------------
+  answer      functional      3    5124      384     6.4s    6.4s   12.8s  37.2%
+  compact     overhead        3    5142      192     6.2s    3.2s    9.4s  27.2%
+  judge       overhead        3    5196        6     6.3s    0.1s    6.3s  18.4%
+  plan        functional      3     125      167     0.6s    2.8s    3.4s  10.0%
+  guard_in    overhead        3     137        6     1.6s    0.1s    1.7s   4.9%
+  guard_out   overhead        3     117        6     0.7s    0.1s    0.8s   2.3%
+
+  overhead:functional  calls 2.00x  in-tok 2.02x  out-tok 0.38x  gpu 1.12x   overhead = 52.8% of gpu
+
+#### OUTPUT ####
+  model               resident     decode  out-tok     gpu  overhead % of gpu
+  ----------------------------------------------------------------------------
+  qwen3:1.7b             2.4GB     147t/s    0.52x   1.45x              59.1%
+  qwen3:4b               3.9GB      78t/s    0.58x   1.46x              59.3%
+  gemma3:4b              3.9GB      80t/s    0.60x   1.59x              61.4%
+  qwen3.5:35b-a3b       23.3GB      60t/s    0.38x   1.12x              52.8%
+
+==================================================================================
+E2  session growth: the overhead share as the transcript gets longer
+==================================================================================
+
+#### OUTPUT ####
+   turn  ctx tok  func gpu  over gpu  overhead % of gpu
+  ------------------------------------------------------
+      1      838      2.5s      2.6s              51.3%
+      2     1033      1.8s      1.5s              44.5%
+      3     1221      1.9s      1.5s              44.7%
+      4     1409      1.9s      1.5s              43.9%
+      5     1610      1.9s      1.5s              44.8%
+      6     1792      1.9s      1.5s              44.5%
+      7     1987      1.9s      1.5s              45.3%
+      8     2175      1.9s      1.6s              45.2%
+
+==================================================================================
+E3  prefix cache: what compaction costs by rewriting the front of context
+==================================================================================
+
+#### OUTPUT ####
+   rep   append-only prefill   rewritten-prefix prefill
+  ------------------------------------------------------
+     0                 1.71s                      1.88s
+     1                 0.06s                      1.89s
+     2                 0.06s                      1.83s
+     3                 0.06s                      1.87s
+     4                 0.06s                      1.84s
+
+  median prefill after first call: append-only 0.06s   rewritten 1.87s   penalty 30.9x
+
+==================================================================================
+E4  concurrency, OLLAMA_NUM_PARALLEL=1
+==================================================================================
+
+#### OUTPUT ####
+  concurrent  harness  sess/min    p95 s  median s
+  ------------------------------------------------
+           1    False     16.17      3.6       3.5
+           1     True      6.00     10.0       9.6
+           2    False     14.70      8.4       8.2
+           2     True     10.15     11.9      11.8
+           4    False     16.31     12.5      10.9
+           4     True     11.03     21.5      21.3
+           8    False     18.02     24.2      18.9
+           8     True     10.62     45.0      44.4
+
+wrote results_p1.json
+host=http://localhost:11434  num_ctx=8192  OLLAMA_NUM_PARALLEL=4
+
+==================================================================================
+E4  concurrency, OLLAMA_NUM_PARALLEL=4
+==================================================================================
+
+#### OUTPUT ####
+  concurrent  harness  sess/min    p95 s  median s
+  ------------------------------------------------
+           1    False     17.89      3.3       3.3
+           1     True      7.28      8.7       8.0
+           2    False     18.66      7.0       6.4
+           2     True     12.94      9.5       9.3
+           4    False     20.24     11.8      11.8
+           4     True     17.18     14.0      14.0
+           8    False     27.26     17.6      14.1
+           8     True     11.49     41.8      41.5
+
+wrote results_p4.json
+host=http://localhost:11434  num_ctx=8192  OLLAMA_NUM_PARALLEL=4
+
+==================================================================================
+E5  resident memory against context window
+==================================================================================
+
+#### OUTPUT ####
+  model               num_ctx   resident   over weights
+  ------------------------------------------------------
+  qwen3:4b               2048      3.9GB          1.4GB
+  qwen3:4b               8192      7.5GB          5.0GB
+  qwen3:4b              32768     22.0GB         19.5GB
+  qwen3:4b             131072     80.6GB         78.1GB
+  qwen3.5:35b-a3b        2048     23.1GB          0.1GB
+  qwen3.5:35b-a3b        8192     23.3GB          0.3GB
+  qwen3.5:35b-a3b       32768     23.8GB          0.8GB
+
+wrote results_e5.json

@@ -1,0 +1,154 @@
+Code blocks, in the order they appear.
+
+Medium has no tables, and these are monospace ASCII rather than
+tabular markup, so each one goes into a Medium CODE BLOCK:
+
+  type ``` on an empty line, or press Cmd-Option-6, then paste
+  with Cmd-Shift-V so no rich text comes along and splits it
+
+Medium's code column fits about 85 characters before it starts to
+scroll sideways. The widest here is 80.
+
+========================================================================
+
+BLOCK 1  [python]  49 cols
+section: Two accounting methods, opposite conclusions
+file:    blocks/01-two-accounting-methods-opposite-conclusions.txt
+------------------------------------------------------------------------
+@dataclass
+class Call:
+    cls: str          # "functional" | "overhead"
+    step: str
+    ...
+    prompt_tokens: int
+    output_tokens: int
+    prefill_s: float
+    decode_s: float
+
+    @property
+    def gpu_s(self) -> float:
+        return self.prefill_s + self.decode_s
+------------------------------------------------------------------------
+
+BLOCK 2  [text]  80 cols
+section: Two accounting methods, opposite conclusions
+file:    blocks/02-two-accounting-methods-opposite-conclusions.txt
+------------------------------------------------------------------------
+#### OUTPUT ####
+  step        class       calls  in tok  out tok  prefill  decode   gpu s  % gpu
+  ------------------------------------------------------------------------------
+  answer      functional      3    4956      384     2.2s    5.3s    7.5s  30.6%
+  compact     overhead        3    4974      192     5.0s    2.5s    7.5s  30.3%
+  judge       overhead        3    5025       48     5.1s    0.6s    5.7s  23.3%
+  plan        functional      3     116      192     0.2s    2.2s    2.5s  10.1%
+  guard_in    overhead        3     128       48     0.2s    0.5s    0.7s   2.9%
+  guard_out   overhead        3     108       48     0.1s    0.6s    0.7s   2.8%
+
+  overhead:functional  out-tok 0.58x   gpu 1.46x   overhead = 59.3% of gpu
+------------------------------------------------------------------------
+
+BLOCK 3  [text]  78 cols
+section: The same three sessions on three more models
+file:    blocks/03-the-same-three-sessions-on-three-more-models.txt
+------------------------------------------------------------------------
+#### OUTPUT ####
+  model               resident     decode  out-tok     gpu  overhead % of gpu
+  ----------------------------------------------------------------------------
+  qwen3:1.7b             2.4GB     147t/s    0.52x   1.45x              59.1%
+  qwen3:4b               3.9GB      78t/s    0.58x   1.46x              59.3%
+  gemma3:4b              3.9GB      80t/s    0.60x   1.59x              61.4%
+  qwen3.5:35b-a3b       23.3GB      60t/s    0.38x   1.12x              52.8%
+------------------------------------------------------------------------
+
+BLOCK 4  [text]  56 cols
+section: The share I expected to climb, and it did not
+file:    blocks/04-the-share-i-expected-to-climb-and-it-did-not.txt
+------------------------------------------------------------------------
+#### OUTPUT ####
+   turn  ctx tok  func gpu  over gpu  overhead % of gpu
+  ------------------------------------------------------
+      1      838      2.5s      2.6s              51.3%
+      2     1033      1.8s      1.5s              44.5%
+      3     1221      1.9s      1.5s              44.7%
+      4     1409      1.9s      1.5s              43.9%
+      5     1610      1.9s      1.5s              44.8%
+      6     1792      1.9s      1.5s              44.5%
+      7     1987      1.9s      1.5s              45.3%
+      8     2175      1.9s      1.6s              45.2%
+------------------------------------------------------------------------
+
+BLOCK 5  [text]  70 cols
+section: Compaction pays twice
+file:    blocks/05-compaction-pays-twice.txt
+------------------------------------------------------------------------
+#### OUTPUT ####
+   rep   append-only prefill   rewritten-prefix prefill
+  ------------------------------------------------------
+     0                 1.71s                      1.88s
+     1                 0.06s                      1.89s
+     2                 0.06s                      1.83s
+     3                 0.06s                      1.87s
+     4                 0.06s                      1.84s
+
+  median prefill after first call: append-only 0.06s   rewritten 1.87s
+  penalty 30.9x
+------------------------------------------------------------------------
+
+BLOCK 6  [text]  68 cols
+section: Batching hides the harness until the box saturates
+file:    blocks/06-batching-hides-the-harness-until-the-box-saturat.txt
+------------------------------------------------------------------------
+#### E4, BOTH RUNS, MERGED BY HAND ####
+  concurrent  harness   parallel=1  parallel=4   slow p1   slow p4
+  ------------------------------------------------------------------
+           1    False        16.17       17.89       3.6       3.3
+           1     True         6.00        7.28      10.0       8.7
+           2    False        14.70       18.66       8.4       7.0
+           2     True        10.15       12.94      11.9       9.5
+           4    False        16.31       20.24      12.5      11.8
+           4     True        11.03       17.18      21.5      14.0
+           8    False        18.02       27.26      24.2      17.6
+           8     True        10.62       11.49      45.0      41.8
+------------------------------------------------------------------------
+
+BLOCK 7  [text]  56 cols
+section: Resident memory is weights plus a reservation you chose
+file:    blocks/07-resident-memory-is-weights-plus-a-reservation-yo.txt
+------------------------------------------------------------------------
+#### OUTPUT ####
+  model               num_ctx   resident   over weights
+  ------------------------------------------------------
+  qwen3:4b               2048      3.9GB          1.4GB
+  qwen3:4b               8192      7.5GB          5.0GB
+  qwen3:4b              32768     22.0GB         19.5GB
+  qwen3:4b             131072     80.6GB         78.1GB
+------------------------------------------------------------------------
+
+BLOCK 8  [text]  56 cols
+section: The 35B with more room for context than the 4B
+file:    blocks/08-the-35b-with-more-room-for-context-than-the-4b.txt
+------------------------------------------------------------------------
+#### OUTPUT ####
+  model               num_ctx   resident   over weights
+  ------------------------------------------------------
+  qwen3.5:35b-a3b        2048     23.1GB          0.1GB
+  qwen3.5:35b-a3b        8192     23.3GB          0.3GB
+  qwen3.5:35b-a3b       32768     23.8GB          0.8GB
+------------------------------------------------------------------------
+
+BLOCK 9  [text]  58 cols
+section: What it cost to find out
+file:    blocks/09-what-it-cost-to-find-out.txt
+------------------------------------------------------------------------
+#### OUTPUT ####
+  item                                          value
+  --------------------------------------------------------
+  hardware                        Apple M3 Max, 36 GB
+  models downloaded                           30.2 GB
+  model invocations                         about 450
+  experiments                                       5
+  wall clock, measurement runs                12m 40s
+  daemon restarts, to vary NUM_PARALLEL             2
+  hypotheses written down in advance                2
+  hypotheses that survived                          0
+------------------------------------------------------------------------

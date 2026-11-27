@@ -1,0 +1,25 @@
+title:     Stopping AI agents from skipping steps, with one file that runs anywhere
+subtitle:  Stepgate is an MCP server that shows an agent one step at a time and moves on only when mechanical checks pass, so it cannot skip a step or fake a result. A stepfile is one portable file that runs in any MCP client. Measuring its checks showed most of them were doing work the model should never have been doing.
+tags:      [ai, agents, mcp, guardrails]
+canonical: https://chaarangan.github.io/blog/stopping-ai-agents-from-skipping-steps/
+
+Import (keeps SEO on your own domain):
+  medium.com/p/import  ->  https://chaarangan.github.io/blog/stopping-ai-agents-from-skipping-steps/
+
+Or paste article.html and set the canonical link by hand:
+  story settings (...) -> More settings -> Advanced settings
+
+Figures to upload (2):
+  1. images/01-how-a-stepgate-run-works-the-agent-sees-one-step.png
+     The agent never sees step 2 until step 1's gates pass, and never holds the API key.
+  2. images/02-the-vin-stepfile-before-and-after-four-agent-ste.png
+     Twelve of the fifteen gates checked work the model no longer does.
+
+Code blocks to re-add (4), see blocks.txt:
+  1. blocks/01-half-of-every-stepfile-was-checking.txt  (96 cols)
+  2. blocks/02-the-model-judges-the-server-computes.txt  (85 cols)
+  3. blocks/03-the-model-judges-the-server-computes.txt  (115 cols)
+  4. blocks/04-try-it.txt  (52 cols)
+
+Medium has no tables. Each block goes in a Medium code block:
+  ``` on an empty line (or Cmd-Option-6), paste with Cmd-Shift-V

@@ -1,0 +1,11 @@
+#### OUTPUT ####
+  step        class       calls  in tok  out tok  prefill  decode   gpu s  % gpu
+  ------------------------------------------------------------------------------
+  answer      functional      3    4956      384     2.2s    5.3s    7.5s  30.6%
+  compact     overhead        3    4974      192     5.0s    2.5s    7.5s  30.3%
+  judge       overhead        3    5025       48     5.1s    0.6s    5.7s  23.3%
+  plan        functional      3     116      192     0.2s    2.2s    2.5s  10.1%
+  guard_in    overhead        3     128       48     0.2s    0.5s    0.7s   2.9%
+  guard_out   overhead        3     108       48     0.1s    0.6s    0.7s   2.8%
+
+  overhead:functional  out-tok 0.58x   gpu 1.46x   overhead = 59.3% of gpu

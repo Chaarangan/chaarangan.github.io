@@ -1,0 +1,11 @@
+#### OUTPUT ####
+   rep   append-only prefill   rewritten-prefix prefill
+  ------------------------------------------------------
+     0                 1.71s                      1.88s
+     1                 0.06s                      1.89s
+     2                 0.06s                      1.83s
+     3                 0.06s                      1.87s
+     4                 0.06s                      1.84s
+
+  median prefill after first call: append-only 0.06s   rewritten 1.87s
+  penalty 30.9x

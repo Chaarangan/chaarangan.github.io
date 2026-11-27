@@ -1,0 +1,24 @@
+import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
+
+export default defineWorkersConfig({
+  test: {
+    poolOptions: {
+      workers: {
+        // Bindings come from wrangler.toml so the tests exercise the same shape
+        // as production. Secrets are injected here because .dev.vars is not
+        // committed and these values are fake anyway.
+        wrangler: { configPath: './wrangler.toml' },
+        miniflare: {
+          bindings: {
+            ENVIRONMENT: 'dev',
+            TURNSTILE_SECRET: 'test-turnstile-secret',
+            RESEND_API_KEY: 'test-resend-key',
+            ALERT_EMAIL: 'alerts@example.com',
+            ADMIN_TOKEN: 'test-admin-token',
+            IP_HASH_SECRET: 'test-ip-secret',
+          },
+        },
+      },
+    },
+  },
+});

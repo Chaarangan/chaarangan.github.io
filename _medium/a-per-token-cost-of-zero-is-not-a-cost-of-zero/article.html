@@ -1,0 +1,476 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>A per-token cost of zero is not a cost of zero</title>
+<style>
+body{max-width:700px;margin:40px auto;padding:0 20px;font:18px/1.6 Georgia,serif;color:#182420}
+h1{font:700 34px/1.2 -apple-system,Helvetica,sans-serif}
+h2{font:700 24px/1.3 -apple-system,Helvetica,sans-serif;margin-top:2em}
+pre{background:#f6f8f7;padding:14px;overflow-x:auto;font:13px/1.45 ui-monospace,Menlo,monospace}
+code{font:0.88em ui-monospace,Menlo,monospace;background:#f2f6f4;padding:1px 4px}
+pre code{background:none;padding:0}
+em{color:#586761}
+</style></head><body>
+<h1>A per-token cost of zero is not a cost of zero</h1>
+<p><strong>Memory, evaluation, and guardrail calls took 53% to 61% of the GPU across four models but only 27% to 37% of the output tokens. On hardware you own, the first number is the one that predicted the throughput I measured one session at a time.</strong></p>
+
+        <p>An agent that answers questions over your documents makes more model calls than
+the ones you wrote. Memory compaction, an LLM-as-judge score, a guardrail check
+on the way in and another on the way out. Across four models and two families,
+those unwritten calls took 52.8% to 61.4% of the GPU. The same calls were 27% to
+37% of the output tokens, and that is the number most dashboards show you.</p>
+
+<p>Debmalya Biswas recently put a number on this. Non-functional aspects, memory,
+evals and guardrails, “can lead to 2-3 times more LLM invocations than those
+invoked to directly execute the agent functionality”
+(<a href="https://aiadvances.org/tokenomics-for-the-agentic-harness-41dbaa822f7f">Tokenomics: FinOps for the Agentic Harness</a>).
+The article does not stop at the invoice either: it sizes the self-hosted case
+too, down to whether the model fits in one GPU and how batch size trades against
+latency, and proposes an OpenTelemetry attribute set so the calls can be costed.</p>
+
+<p>What it left me wanting was the conversion. A count of invocations, and the token
+totals the standard attributes record, are both things I can log. Neither told me
+what those calls would cost on a box I had already bought, where the marginal
+token is free and the overhead lands on a budget no finance process watches: how
+many people you can serve before the machine falls over.</p>
+
+<p>This post builds a harness and measures that on a 36 GB M3 Max.</p>
+
+<ul>
+  <li>Why output-token accounting reports the overhead with the wrong sign, and why
+input-token accounting is no better</li>
+  <li>Whether the result survives a change of model family and a 20x span in weights</li>
+  <li>What happens to the overhead share as a session gets longer</li>
+  <li>What rewriting the front of your context costs: 31x on every later call</li>
+  <li>How continuous batching hides the harness until the box saturates</li>
+  <li>Which of weights and KV reservation actually sets resident memory</li>
+</ul>
+
+<h2 id="two-accounting-methods-opposite-conclusions">Two accounting methods, opposite conclusions</h2>
+
+<p>The harness runs a toy agent over a synthetic corpus and tags every invocation
+as either <em>functional</em> (plan, answer) or <em>overhead</em> (guard in, compact, judge,
+guard out). Ollama reports prefill and decode durations separately, so a call
+can be charged for occupancy instead of merely counted.</p>
+
+<p>Two shortcuts are worth declaring up front. The judge and the outbound guard get
+a placeholder where the generated answer would go, a short string naming its
+length, because this harness measures occupancy and never reads what the model
+wrote. And what the compaction and judge steps read as the session state is the
+question plus the retrieved documents, not an accumulated transcript with the
+plan and the answer in it. Both shortcuts shrink prompts that a real system would
+grow, so both understate the overhead share below.</p>
+
+<p>Prefill and decode carry the whole argument. Prefill is the model reading the
+prompt, and its cost scales with how many tokens you hand it. Decode is the
+model writing the reply, one token at a time, and its cost scales with how many
+tokens come back. A hosted API bills for both and weights the bill toward
+decode. On a GPU you own, both occupy the same hardware and the weighting is
+irrelevant.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Call</span><span class="p">:</span>
+    <span class="n">cls</span><span class="p">:</span> <span class="nb">str</span>          <span class="c1"># "functional" | "overhead"
+</span>    <span class="n">step</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="bp">...</span>
+    <span class="n">prompt_tokens</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">output_tokens</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">prefill_s</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">decode_s</span><span class="p">:</span> <span class="nb">float</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">gpu_s</span><span class="p">(</span><span class="n">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">self</span><span class="p">.</span><span class="n">prefill_s</span> <span class="o">+</span> <span class="n">self</span><span class="p">.</span><span class="n">decode_s</span>
+</code></pre></div></div>
+
+<p>Context length is pinned with <code class="language-plaintext highlighter-rouge">num_ctx</code> for every model, because the daemon
+default of 131,072 would not fit a 23 GB model on this machine, and because a
+comparison across model sizes is meaningless if each one gets a different
+reservation. Three sessions on <code class="language-plaintext highlighter-rouge">qwen3:4b</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#### OUTPUT ####
+  step        class       calls  in tok  out tok  prefill  decode   gpu s  % gpu
+  ------------------------------------------------------------------------------
+  answer      functional      3    4956      384     2.2s    5.3s    7.5s  30.6%
+  compact     overhead        3    4974      192     5.0s    2.5s    7.5s  30.3%
+  judge       overhead        3    5025       48     5.1s    0.6s    5.7s  23.3%
+  plan        functional      3     116      192     0.2s    2.2s    2.5s  10.1%
+  guard_in    overhead        3     128       48     0.2s    0.5s    0.7s   2.9%
+  guard_out   overhead        3     108       48     0.1s    0.6s    0.7s   2.8%
+
+  overhead:functional  out-tok 0.58x   gpu 1.46x   overhead = 59.3% of gpu
+</code></pre></div></div>
+
+<p>The 2:1 call ratio is a design choice, not a discovery: I wrote four overhead
+steps and two functional ones. The divergence in the last line is the part I did
+not choose. Counted in output tokens the overhead is 0.58x the functional work,
+barely half. Counted in GPU-seconds it is 1.46x. The two methods put the overhead
+on opposite sides of break-even.</p>
+
+<h2 id="the-call-that-writes-16-tokens-and-takes-a-fifth-of-the-box">The call that writes 16 tokens and takes a fifth of the box</h2>
+
+<p>Look at <code class="language-plaintext highlighter-rouge">judge</code>. Across three sessions it produced 48 output tokens and consumed
+23.3% of the GPU. That is 76% of what the <code class="language-plaintext highlighter-rouge">answer</code> call cost while producing one
+eighth of the output.</p>
+
+<p>48 tokens over three calls is 16 each, which is exactly the <code class="language-plaintext highlighter-rouge">num_predict</code> ceiling
+the harness sets for that step, so on this model the judge was cut off before it
+finished. On the 1.7B and the 35B it stopped on its own after two tokens.</p>
+
+<p>The explanation is the prefill column. <code class="language-plaintext highlighter-rouge">judge</code> spent 5.1s reading and 0.6s
+writing. <code class="language-plaintext highlighter-rouge">answer</code> spent 2.2s reading and 5.3s writing. The two expensive overhead
+steps are prefill-bound because they re-read the session: compaction reads the
+transcript and the judge reads it again. The two guardrails read only the
+question, which is why they sit at the bottom of the ledger at 2.9% and 2.8%.</p>
+
+<p>That is where the harness parts company with the usual rule of thumb. Biswas
+cites the standard split, that “in most requests prefill takes less than 20% of
+the end-to-end latency, while decoding takes more than 80%”. My <code class="language-plaintext highlighter-rouge">plan</code> call obeys
+it exactly, 0.2s reading against 2.2s writing, 8% prefill, and <code class="language-plaintext highlighter-rouge">answer</code> is close
+enough at 29%. The two expensive overhead calls inverted it: <code class="language-plaintext highlighter-rouge">compact</code> is 67%
+prefill and <code class="language-plaintext highlighter-rouge">judge</code> is 89%. Across the whole harnessed session prefill took 52%
+of the GPU. The 20/80 rule describes a short prompt and a long answer, which is
+what the functional calls are. The non-functional calls are the other shape.</p>
+
+
+<p style="padding:24px;background:#fafafa;border:1px dashed #bbb;text-align:center;color:#555">UPLOAD IMAGE 1: images/01-gpu-seconds-per-step-split-into-prefill-and-deco.png</p>
+<p><em>Compaction cost the same as answering the question, and wrote half as much.</em></p>
+
+
+<h2 id="the-same-three-sessions-on-three-more-models">The same three sessions on three more models</h2>
+
+<p>One model family proves nothing, and a 4B model is small enough that its fast
+decode could be flattering the overhead. So the same three sessions ran on four
+models: two sizes of Qwen 3, a Gemma 3 of matching size for a family check, and
+a 35B mixture-of-experts with 3B active parameters for a scale check.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#### OUTPUT ####
+  model               resident     decode  out-tok     gpu  overhead % of gpu
+  ----------------------------------------------------------------------------
+  qwen3:1.7b             2.4GB     147t/s    0.52x   1.45x              59.1%
+  qwen3:4b               3.9GB      78t/s    0.58x   1.46x              59.3%
+  gemma3:4b              3.9GB      80t/s    0.60x   1.59x              61.4%
+  qwen3.5:35b-a3b       23.3GB      60t/s    0.38x   1.12x              52.8%
+</code></pre></div></div>
+
+<p>The overhead share lands between 52.8% and 61.4% across two independent model
+families. The parameter span is 20x by weights, which is what sets the memory
+footprint, but the 35B activates only 3B of those per token, so in compute terms
+the spread is nearer 2x. It is a stronger check on architecture than on scale.</p>
+
+<p>The 35B does have the lowest share, though not for the reason I first wrote down.
+I had it as slower decode making the decode-heavy <code class="language-plaintext highlighter-rouge">answer</code> call dearer. The rates
+say otherwise. Across the whole ledger the 35B prefilled at 727 tokens a second
+against the 4B’s 1,196, a slowdown of 1.65x, while its decode slowed by only 1.3x.
+On those numbers a prefill-bound overhead share should go up, not down.</p>
+
+<p>Part of the answer is the output column. The 35B’s judge and outbound guard each
+stopped after two tokens where the 4B ran into its 16-token ceiling, so the
+overhead wrote 210 tokens where the 4B wrote 336. Had it written the 4B’s total at
+its own decode rate the ratio would land at 1.26 instead of 1.12, which recovers
+about 40% of the drop from 1.46. The rest sits on the functional side, whose
+prefill rose 2.9x against the overhead’s 1.4x. I have not isolated why.</p>
+
+<p>The column that matters is <code class="language-plaintext highlighter-rouge">out-tok</code>. On every model tested it sits between 0.38x
+and 0.60x while GPU-seconds sit between 1.12x and 1.59x. Output-token counting
+puts the overhead below break-even on all four; GPU time puts it above on all
+four.</p>
+
+<p>Counting input tokens instead does not rescue the method, it only moves the error.
+The overhead reads 2.02x what the functional calls read, identical to two decimal
+places on all four models, against a true GPU cost of 1.12x to 1.59x. So the
+output column reports between a third and two fifths of what the box charges, and
+the input column reports 1.3x to 1.8x of it. Neither lands on the real number.
+That matters for anyone instrumenting with the standard attributes, because
+<code class="language-plaintext highlighter-rouge">input_tokens</code> happens to sit near the 2-3x range the invocation count implies,
+which makes it look like a confirmation when it is a coincidence.</p>
+
+
+<p style="padding:24px;background:#fafafa;border:1px dashed #bbb;text-align:center;color:#555">UPLOAD IMAGE 2: images/02-overhead-to-functional-ratio-measured-in-output.png</p>
+<p><em>Every model puts the two measures on opposite sides of break-even.</em></p>
+
+
+<h2 id="the-share-i-expected-to-climb-and-it-did-not">The share I expected to climb, and it did not</h2>
+
+<p>Before running it I wrote down a prediction: since prefill scales with context
+and an agent session only grows, the overhead share should climb as the session
+ages. Eight turns of a growing transcript on <code class="language-plaintext highlighter-rouge">qwen3:4b</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#### OUTPUT ####
+   turn  ctx tok  func gpu  over gpu  overhead % of gpu
+  ------------------------------------------------------
+      1      838      2.5s      2.6s              51.3%
+      2     1033      1.8s      1.5s              44.5%
+      3     1221      1.9s      1.5s              44.7%
+      4     1409      1.9s      1.5s              43.9%
+      5     1610      1.9s      1.5s              44.8%
+      6     1792      1.9s      1.5s              44.5%
+      7     1987      1.9s      1.5s              45.3%
+      8     2175      1.9s      1.6s              45.2%
+</code></pre></div></div>
+
+<p>Wrong. The context grew 2.6x and the share fell after turn one, then sat flat at
+about 45%. Turn one costs 5.1 GPU-seconds because nothing is cached yet. Every
+turn after it costs about 3.4, and that figure does not grow as the transcript
+does.</p>
+
+<p>The reason is prefix caching. When a session grows by appending, each call
+prefills only the new tokens and reuses the rest of the KV cache. So the obvious
+mitigations, shorter sessions and more aggressive trimming, do not help here.</p>
+
+<p>Note how little ground this covers. Eight turns took the transcript to 2,175
+tokens, well short of the 8,192 the run was pinned to and shorter than the 5,000
+token prompts in the ledger above. What I measured is that the share stays flat
+over the first couple of thousand tokens.</p>
+
+<h2 id="compaction-pays-twice">Compaction pays twice</h2>
+
+<p>If append-only growth is cheap because the cache holds, then the expensive thing
+is invalidating the prefix, not reading a lot. To check that, I ran the same judge
+call five times over an identical body of session state. In one arm the only text
+that changed between calls sat at the end of the prompt. In the other, a random
+nonce was pasted at the front as well.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#### OUTPUT ####
+   rep   append-only prefill   rewritten-prefix prefill
+  ------------------------------------------------------
+     0                 1.71s                      1.88s
+     1                 0.06s                      1.89s
+     2                 0.06s                      1.83s
+     3                 0.06s                      1.87s
+     4                 0.06s                      1.84s
+
+  median prefill after first call: append-only 0.06s   rewritten 1.87s
+  penalty 30.9x
+</code></pre></div></div>
+
+<p>The session state and the work asked for are identical in both columns; the
+second carries the nonce on top, about fifteen tokens. Appending lets prefill
+collapse from 1.71s to 0.06s once the cache is warm. Prepending costs 1.87s on
+every call for the life of the session.</p>
+
+
+<p style="padding:24px;background:#fafafa;border:1px dashed #bbb;text-align:center;color:#555">UPLOAD IMAGE 3: images/03-prefill-time-per-repetition-for-append-only-vers.png</p>
+<p><em>The only difference between the two lines is where a few tokens were inserted.</em></p>
+
+
+<p>A lot of ordinary agent code sits on the wrong side of that line. Compaction
+that rewrites the transcript buys memory and forfeits the cache for every later
+call, which is why it pays twice. Retrieved documents placed at the top of the
+prompt, the default layout in most RAG code, change every turn and guarantee the
+cache never hits. Anything rotating in the system prompt, a timestamp or a
+session ID, costs the entire prefix for the sake of a few tokens.</p>
+
+<h2 id="batching-hides-the-harness-until-the-box-saturates">Batching hides the harness until the box saturates</h2>
+
+<p>The first version of this measurement ran with <code class="language-plaintext highlighter-rouge">OLLAMA_NUM_PARALLEL</code> unset, so
+the box was serialising instead of batching. Rerunning the concurrency sweep at 1
+and at 4 says how much of the penalty was queueing. The two settings are separate
+runs in the raw log, so unlike every other table here this one is merged by hand
+and the tail column is renamed:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#### E4, BOTH RUNS, MERGED BY HAND ####
+  concurrent  harness   parallel=1  parallel=4   slow p1   slow p4
+  ------------------------------------------------------------------
+           1    False        16.17       17.89       3.6       3.3
+           1     True         6.00        7.28      10.0       8.7
+           2    False        14.70       18.66       8.4       7.0
+           2     True        10.15       12.94      11.9       9.5
+           4    False        16.31       20.24      12.5      11.8
+           4     True        11.03       17.18      21.5      14.0
+           8    False        18.02       27.26      24.2      17.6
+           8     True        10.62       11.49      45.0      41.8
+</code></pre></div></div>
+
+<p>Batching works, up to a point. At four concurrent sessions it lifts the harnessed
+path from 11.03 to 17.18 sessions per minute and the penalty against an
+unharnessed box nearly disappears, from 1.48x down to 1.18x. At eight sessions the
+unharnessed path keeps scaling to 27.26 while the harnessed path falls back to
+11.49, the penalty reopens to 2.37x, and the slow tail sits at 41.8s.</p>
+
+<p>Two caveats on that table. Every cell is a single run of four sessions, eight at
+the top step, with no repeats, so the flat no-harness line at parallel=1 (16.17,
+14.70, 16.31, 18.02) is inside the noise and is not a trend. And the last two
+columns are the second-slowest session in each run, which is all a sample that
+size supports. They are not a p95, whatever my harness called them.</p>
+
+
+<p style="padding:24px;background:#fafafa;border:1px dashed #bbb;text-align:center;color:#555">UPLOAD IMAGE 4: images/04-sessions-per-minute-against-concurrency-for-four.png</p>
+<p><em>The harnessed path tracks the clean one to four sessions, then falls back while the clean one keeps going.</em></p>
+
+
+<p>So the harness costs headroom, not a fixed fraction of the box. It lowers the
+concurrency at which the machine stops scaling, so a capacity number measured
+with the guardrails switched off will be higher than the one you can operate at.</p>
+
+<h2 id="does-the-ledger-predict-anything">Does the ledger predict anything?</h2>
+
+<p>The whole argument rests on GPU-seconds being the number worth keeping, so it is
+fair to ask whether it forecasts anything. It does, and the table above is the
+check.</p>
+
+<p>The ledger for <code class="language-plaintext highlighter-rouge">qwen3:4b</code> puts overhead at 1.46x the functional work, so a
+harnessed session should cost 2.46 times an unharnessed one, and a box running
+them one at a time should turn over 2.46x fewer. Measured at
+<code class="language-plaintext highlighter-rouge">OLLAMA_NUM_PARALLEL=4</code>, concurrency 1: 17.89 against 7.28, a ratio of 2.46. With
+batching off it came out at 2.70, and at eight concurrent sessions 2.37.</p>
+
+<p>Run the same prediction from the output-token column and you get 1 + 0.58 = 1.58x
+against the same measured 2.46, an undershoot of about a third on the throughput
+you give up.</p>
+
+<p>One honest limit on that comparison. Both predictions are single-session
+accounting, so the serial column is the only place either of them claims to
+forecast anything, and away from it neither does. The eight cells of the batching
+sweep give penalties of 2.70, 1.45, 1.48 and 1.70 with batching off, and 2.46,
+1.44, 1.18 and 2.37 with it on. At concurrency 2 and 4 the penalty collapses to
+between 1.18x and 1.48x, and the 1.58x token figure lands nearer to those than the
+ledger’s 2.46x does. That is not the token column working. It is a smaller wrong
+number sitting near a region where the penalty is set by how much queue the
+batcher can absorb rather than by any per-session ledger.</p>
+
+<p>Four sessions per cell does not earn a match as close as 2.46 against 2.46, and
+the workload mix is not quite identical between the two experiments, so the third
+significant figure is luck. What the ledger buys is the serial number, and that is
+the one that sets a floor under capacity.</p>
+
+<h2 id="resident-memory-is-weights-plus-a-reservation-you-chose">Resident memory is weights plus a reservation you chose</h2>
+
+<p>The first run of this experiment produced an oddity I could not explain: a model
+whose weights are about 2.5 GB on disk sat at 22 GB resident. Varying <code class="language-plaintext highlighter-rouge">num_ctx</code>
+explains it. Resident figures here are what Ollama reports through <code class="language-plaintext highlighter-rouge">/api/ps</code>, in
+decimal GB, and the sweep ran with four parallel slots.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#### OUTPUT ####
+  model               num_ctx   resident   over weights
+  ------------------------------------------------------
+  qwen3:4b               2048      3.9GB          1.4GB
+  qwen3:4b               8192      7.5GB          5.0GB
+  qwen3:4b              32768     22.0GB         19.5GB
+  qwen3:4b             131072     80.6GB         78.1GB
+</code></pre></div></div>
+
+<p>The KV reservation is linear in context length and it dwarfs the weights well
+before you reach the default. It is also per parallel slot, so the <code class="language-plaintext highlighter-rouge">num_ctx</code>
+column above is really four times that many tokens of reservation: 32,768 across
+four slots produced the same 22 GB that 131,072 on a single slot produced in the
+earlier run, which is where the original oddity came from. By the last row this
+2.5 GB model is asking for 80.6 GB on a machine with 36, a number Ollama will
+report and the hardware cannot honour.</p>
+
+<p>Those four rows look like they say resident memory is set by the context window
+and not by the parameter count. I believed that until I ran the next model.</p>
+
+<h2 id="the-35b-with-more-room-for-context-than-the-4b">The 35B with more room for context than the 4B</h2>
+
+<p>Running the same sweep on the mixture-of-experts model inverts the conclusion.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#### OUTPUT ####
+  model               num_ctx   resident   over weights
+  ------------------------------------------------------
+  qwen3.5:35b-a3b        2048     23.1GB          0.1GB
+  qwen3.5:35b-a3b        8192     23.3GB          0.3GB
+  qwen3.5:35b-a3b       32768     23.8GB          0.8GB
+</code></pre></div></div>
+
+<p>Going from 2,048 to 32,768 tokens costs the dense 4B model 18.1 GB and costs the
+35B model 0.7 GB. That is 30,720 extra tokens of <code class="language-plaintext highlighter-rouge">num_ctx</code> across four slots, so
+per thousand tokens of <code class="language-plaintext highlighter-rouge">num_ctx</code> the 4B pays 589 MB and the 35B pays 23 MB, a
+factor of 26.</p>
+
+<p>The generalisation is duller than either sweep suggests: resident memory is
+weights plus a KV reservation, and which term dominates depends on the model’s
+attention geometry and on a context setting you chose. The consequence is more
+surprising. On this 36 GB box the 35B model can hold a longer context than the 4B
+one. If your instinct is that a smaller model leaves more room for context, that
+instinct is backwards for a large class of current models. I only measured the
+35B out to 32,768, so the size of the gap beyond that is extrapolation. The
+ordering is not.</p>
+
+<h2 id="where-these-numbers-stop-being-true">Where these numbers stop being true</h2>
+
+<p>One machine, one serving runtime, one synthetic corpus, and a harness whose
+shape I chose. Each of those bounds the result, and it is worth being specific
+about which way each one cuts.</p>
+
+<p>A server built for throughput, as against a laptop daemon, would push the
+saturation point in the batching section further right, though the shape of the
+curve should hold, because what saturates is memory bandwidth against reserved
+KV. A production agent with longer tool outputs and shorter judged answers would
+move the overhead share up, not down, since every one of those changes adds
+tokens to be read and not written. Both of the shortcuts I declared at the top
+cut the same way: feeding the judge and the outbound guard the real answer, and
+handing compaction a transcript that carries the plan and the answer rather than
+just the question and the documents, would each move the share up. The
+prefix-cache result is the most portable of the set, because it depends on a
+property every serving runtime with a KV cache shares, and the least portable is
+the exact 59% figure, which is a property of the harness I wrote.</p>
+
+<p>If you want the number that applies to your system, copy the method and not the
+harness. Tag each call as functional or overhead, charge it for prefill and
+decode, then read the ledger. If you are instrumenting with OpenTelemetry, the
+attribute set Biswas proposes already carries <code class="language-plaintext highlighter-rouge">input_tokens</code>, <code class="language-plaintext highlighter-rouge">output_tokens</code> and
+<code class="language-plaintext highlighter-rouge">cost</code> for every model invocation, which is three fields that cannot answer this
+question on hardware you own. Two more, prefill and decode duration, would make
+occupancy computable on a box where <code class="language-plaintext highlighter-rouge">cost</code> is zero.</p>
+
+<h2 id="what-it-cost-to-find-out">What it cost to find out</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#### OUTPUT ####
+  item                                          value
+  --------------------------------------------------------
+  hardware                        Apple M3 Max, 36 GB
+  models downloaded                           30.2 GB
+  model invocations                         about 450
+  experiments                                       5
+  wall clock, measurement runs                12m 40s
+  daemon restarts, to vary NUM_PARALLEL             2
+  hypotheses written down in advance                2
+  hypotheses that survived                          0
+</code></pre></div></div>
+
+<p>Neither prediction survived. The overhead share did not climb with session
+length, and resident memory is not governed by the context window in the way four
+convincing rows suggested. Adding a model corrected both. Thinking harder about
+the ones I already had would not have.</p>
+
+<h2 id="what-i-would-cut-first">What I would cut first</h2>
+
+<p>I set out to check whether an agent harness is worth what it costs when nobody is
+billing you per token. On four models it took between 52.8% and 61.4% of the GPU,
+and on every one of them the output-token column pointed the other way while the
+input-token column overshot.</p>
+
+<p>The routing fix people reach for first does not work. Sending the overhead to a
+smaller model looks appealing until you notice that <code class="language-plaintext highlighter-rouge">qwen3:1.7b</code> carries
+essentially the same overhead share as the 4B, 59.1% against 59.3%, so the shape
+of the problem is unchanged, and that a second resident model costs its full
+weights out of a memory budget you have already spent.</p>
+
+<p>The measurements point at prefill instead, because that is where the overhead
+sits.</p>
+
+<ul>
+  <li>Keep the context append-only. Prepending anything costs 31x on every
+subsequent call, the largest single number in this post.</li>
+  <li>Move retrieved documents below the stable part of the prompt, not above it, so
+the cache survives a change in retrieval results.</li>
+  <li>Keep the guardrails off the transcript. Mine only ever saw the question, and
+they were the two cheapest rows in the ledger at 2.9% and 2.8%. I never ran the
+expensive version, so take this as what the ledger implies and not as something
+I measured.</li>
+  <li>Judge on a sample. The judge wrote at most 16 tokens a call and took 23.3% of
+the box.</li>
+  <li>Size capacity with the harness switched on, since it costs headroom and not a
+fixed percentage.</li>
+</ul>
+
+<p>Both wrong predictions came from the same mistake. I counted model invocations as
+units of work, when the box is charging for tokens read and memory reserved. So
+count what your agent re-reads, and check what your serving runtime has reserved
+on your behalf.</p>
+
+<p>The harness is <a href="https://chaarangan.github.io/assets/code/agent-capacity-harness.py">466 lines of standard library</a>
+and needs a running Ollama daemon and the four models pulled; the
+<a href="https://chaarangan.github.io/assets/code/agent-capacity-results.txt">full output of every run is here</a>.</p>
+
+</body></html>

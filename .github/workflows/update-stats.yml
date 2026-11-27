@@ -1,0 +1,99 @@
+name: Update live stats
+
+# Keeps the self-growing numbers in index.html (Scholar citations, h-index,
+# i10-index, HuggingFace and PyPI downloads, Stepgate's GitHub stars, forks and
+# npm downloads) current. Landing the change on the Pages branch is what
+# publishes them.
+#
+# This goes through a pull request rather than pushing to main directly. main is
+# protected with "Changes must be made through a pull request" AND "Commits must
+# have verified signatures", and github-actions[bot] satisfies neither: it is not
+# covered by the admin bypass, and commits it makes with `git commit` are
+# unsigned. A direct `git push` is rejected with GH006 -- which is exactly what
+# happened every day from 2026-07-27 onward until this was changed.
+#
+# The squash merge is the part that matters: GitHub builds the commit that lands
+# on main server-side and signs it with its own key, so the signature rule is
+# satisfied. The unsigned commit on the side branch never reaches main.
+on:
+  schedule:
+    # Daily, 06:00 UTC. Daily rather than weekly because Google Scholar refuses
+    # some runner addresses outright, and the address changes between runs: a
+    # refused run costs nothing and tomorrow's run gets a fresh one. A commit is
+    # only made when a number actually changes, so the extra runs are quiet.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-stats
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Refresh stats in index.html
+        env:
+          # Optional. Without it the PyPI number is left untouched.
+          PEPY_API_KEY: ${{ secrets.PEPY_API_KEY }}
+          # Optional. Lifts GitHub's anonymous rate limit for the stars and forks.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/update_stats.py
+
+      - name: Open and merge a stats PR if anything changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- index.html; then
+            echo "Stats unchanged, nothing to commit."
+            exit 0
+          fi
+
+          # The sitemap is no longer stamped here. Since the blog landed,
+          # jekyll-sitemap generates sitemap.xml at build time from every page and
+          # post, so there is no checked-in file to bump -- and the old
+          # bump_sitemap.py asserted the sitemap held exactly one <lastmod>, which
+          # stopped being true with the first published post.
+
+          BRANCH=chore/live-stats
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add index.html
+          git commit -m "chore: refresh live stats"
+          # Force because a previous run may have left the branch behind after a
+          # failed merge; the open PR, if there is one, updates in place.
+          git push --force origin "$BRANCH"
+
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')" ]; then
+            gh pr create --base main --head "$BRANCH" \
+              --title "chore: refresh live stats" \
+              --body "Automated by \`.github/workflows/update-stats.yml\`. Rewrites only the digits inside \`data-stat\` markers in index.html; \`scripts/update_stats.py\` refuses non-positive values, shrinking counters, order-of-magnitude jumps, and any marker count that does not match what it expects."
+          fi
+
+          # Mergeability is computed asynchronously, so the first attempt can lose
+          # a race with GitHub. A run that still cannot merge fails loudly and
+          # tomorrow's run retries from scratch.
+          for attempt in 1 2 3 4 5; do
+            if gh pr merge "$BRANCH" --squash --delete-branch; then
+              echo "Stats PR merged."
+              exit 0
+            fi
+            echo "Merge not ready (attempt $attempt/5); waiting for mergeability."
+            sleep 10
+          done
+
+          echo "::error::stats PR was pushed but could not be merged; leaving it open on $BRANCH"
+          exit 1

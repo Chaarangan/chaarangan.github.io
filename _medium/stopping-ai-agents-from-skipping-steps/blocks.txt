@@ -1,0 +1,55 @@
+Code blocks, in the order they appear.
+
+Medium has no tables, and these are monospace ASCII rather than
+tabular markup, so each one goes into a Medium CODE BLOCK:
+
+  type ``` on an empty line, or press Cmd-Option-6, then paste
+  with Cmd-Shift-V so no rich text comes along and splits it
+
+Medium's code column fits about 85 characters before it starts to
+scroll sideways. The widest here is 115.
+
+========================================================================
+
+BLOCK 1  [text]  96 cols
+section: Half of every stepfile was checking
+file:    blocks/01-half-of-every-stepfile-was-checking.txt
+------------------------------------------------------------------------
+#### THE CATALOG, AS FIRST WRITTEN ####
+Lines, counted as block-style YAML: 16247
+Share of lines: {"gates":"53%","produces":"15%","tools":"14%","instructions":"8%","other":"11%"}
+Filters over calls by tool: 145
+Predicates reading: {"calls":106,"steps_or_inputs":110,"output_only":45}
+------------------------------------------------------------------------
+
+BLOCK 2  [yaml]  85 cols
+section: The model judges, the server computes
+file:    blocks/02-the-model-judges-the-server-computes.txt
+------------------------------------------------------------------------
+- id: decode
+  do:
+    calls:
+      - { id: decode, operation: decodeVin, arguments: { vin: { var: inputs.vin } } }
+    output:
+      make: { var: responses.decode.Results.0.Make }
+      model: { var: responses.decode.Results.0.Model }
+      model_year: { var: responses.decode.Results.0.ModelYear }
+------------------------------------------------------------------------
+
+BLOCK 3  [text]  115 cols
+section: The model judges, the server computes
+file:    blocks/03-the-model-judges-the-server-computes.txt
+------------------------------------------------------------------------
+#### THE CATALOG NOW ####
+Lines, counted as block-style YAML: 12397
+Share of lines: {"gates":"12%","mechanical":"30%","produces":"19%","tools":"18%","instructions":"4%","other":"17%"}
+Filters over calls by tool: 2
+------------------------------------------------------------------------
+
+BLOCK 4  [sh]  52 cols
+section: Try it
+file:    blocks/04-try-it.txt
+------------------------------------------------------------------------
+npx -y stepgate --list                 # the catalog
+npx -y stepgate auto-claim-vin-validation
+------------------------------------------------------------------------

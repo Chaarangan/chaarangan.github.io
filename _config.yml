@@ -1,0 +1,74 @@
+title: Charangan Vasantharajan
+tagline: Software Engineering Manager, Enterprise AI
+description: >-
+  Software Engineering Manager, Enterprise AI, at Iterate.ai. Leads the team behind and
+  owns the architecture of Generate, the enterprise AI platform recognized by Pinnacle,
+  TMC, and CRN. 4 US patents, MASc from McMaster University.
+url: https://chaarangan.github.io
+baseurl: ""
+
+author:
+  name: Charangan Vasantharajan
+  email: charangan@iterate.ai
+  twitter: chaarangan
+
+# The blog is live: the sidebar link is shown and blog pages are indexable.
+# Flip to false to pull it back behind the curtain; nothing else needs changing.
+blog_visible: true
+
+# Comments and reactions, served by the Worker in worker/ (see worker/README.md).
+# Anyone can comment or clap with no account at all; Turnstile and per-IP rate
+# limits are what stand in for a login. Delete the `api` line to switch the
+# section off site-wide; a single post opts out with `comments: false`.
+comments:
+  api: https://chaarangan-comments.chaarangan.workers.dev
+  turnstile_site_key: 0x4AAAAAAEqoZ1RvUtCXrreS
+
+# Dateless post URLs: nicer to share, and a post that gets updated does not
+# advertise a stale year in its path.
+permalink: /blog/:title/
+
+# jekyll-paginate only paginates a file literally named index.html, which is why
+# the listing lives at blog/index.html rather than blog.html.
+paginate: 10
+paginate_path: /blog/page:num/
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  toc_levels: 2..3
+
+# All four are on the GitHub Pages whitelist, so the site still builds natively
+# with no Actions workflow. jekyll-archives is NOT whitelisted -- that is why tag
+# pages are stub files maintained by scripts/sync_tag_pages.py.
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+  - jekyll-paginate
+
+feed:
+  path: feed.xml
+
+defaults:
+  - scope: { path: "", type: "posts" }
+    values:
+      layout: post
+
+exclude:
+  - worker          # Cloudflare Worker source and its node_modules; not a site page
+  - .gems
+  - themes          # design scratch mockups, not part of the published site
+  - Makefile
+  - Gemfile.local
+  - Gemfile.local.lock
+  - Gemfile
+  - Gemfile.lock
+  - vendor
+  - docs
+  - scripts
+  - _medium         # Medium cross-post bundles; drafts and PNGs, not site pages
+  - README.md
+  - .hintrc
+  - .gitattributes

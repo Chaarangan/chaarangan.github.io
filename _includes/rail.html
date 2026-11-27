@@ -1,0 +1,92 @@
+{%- comment -%}
+  The right rail. Every page type gets one, in one style, so the card is the same
+  670px everywhere and nothing shifts as you move between pages:
+
+    post          in-page contents, built in JS from the rendered H2/H3
+    /blog/, tags  the tag filter, vertical
+    homepage      the section nav, moved here out of the left sidebar
+
+  The left sidebar keeps identity and page-level links; this holds "where am I on
+  this page". Below 1248px it folds into a collapsed panel above the content (see
+  the media query in site.css) rather than narrowing the card to make room.
+{%- endcomment -%}
+
+{%- if page.layout == 'post' -%}
+<nav class="rail" id="rail" aria-label="Table of contents" hidden>
+    <details open id="rail-details">
+        <summary>Contents</summary>
+        <div class="rail-label">Contents</div>
+        <ul></ul>
+    </details>
+</nav>
+<script>
+(function () {
+    var rail = document.getElementById('rail');
+    var body = document.querySelector('.post-body');
+    if (!rail || !body) return;
+    var headings = body.querySelectorAll('h2[id], h3[id]');
+    if (!headings.length) { rail.remove(); return; }
+
+    var list = rail.querySelector('ul');
+    var sub = null;
+    headings.forEach(function (h) {
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        li.appendChild(a);
+        if (h.tagName === 'H3') {
+            // Nest under the preceding H2; a stray H3 with no H2 above it falls
+            // back to the top level rather than being dropped.
+            if (!sub) {
+                if (!list.lastElementChild) { list.appendChild(li); return; }
+                sub = document.createElement('ul');
+                list.lastElementChild.appendChild(sub);
+            }
+            sub.appendChild(li);
+        } else {
+            sub = null;
+            list.appendChild(li);
+        }
+    });
+    // Collapse state below 1248px is handled centrally in assets/js/site.js, so
+    // the sections and tags rails get the same treatment as this one.
+    rail.removeAttribute('hidden');
+})();
+</script>
+
+{%- elsif page.nav == 'blog' -%}
+{%- if site.tags.size > 0 -%}
+<nav class="rail" aria-label="Filter by tag">
+    <details open id="rail-details">
+        <summary>Tags</summary>
+        <div class="rail-label">Tags</div>
+        <ul>
+            <li><a href="{{ '/blog/' | relative_url }}"{% unless page.tag %} aria-current="page"{% endunless %}>All<span class="n">{{ site.posts.size }}</span></a></li>
+            {%- assign sorted_tags = site.tags | sort %}
+            {%- for tag in sorted_tags %}
+            <li><a href="{{ '/blog/tags/' | append: tag[0] | append: '/' | relative_url }}"{% if page.tag == tag[0] %} aria-current="page"{% endif %}>{{ tag[0] }}<span class="n">{{ tag[1].size }}</span></a></li>
+            {%- endfor %}
+        </ul>
+    </details>
+</nav>
+{%- endif -%}
+
+{%- else -%}
+<nav class="rail" aria-label="Sections">
+    <details open id="rail-details">
+        <summary>Sections</summary>
+        <div class="rail-label">Sections</div>
+        <ul>
+            <li><a href="{{ '/#about' | relative_url }}">About<span class="n">01</span></a></li>
+            <li><a href="{{ '/#now' | relative_url }}">Now<span class="n">02</span></a></li>
+            <li><a href="{{ '/#generate' | relative_url }}">Generate<span class="n">03</span></a></li>
+            <li><a href="{{ '/#writing' | relative_url }}">Writing &amp; Talks<span class="n">04</span></a></li>
+            <li><a href="{{ '/#research' | relative_url }}">Research &amp; Open Source<span class="n">05</span></a></li>
+            <li><a href="{{ '/#leadership' | relative_url }}">How I Lead<span class="n">06</span></a></li>
+            <li><a href="{{ '/#experience' | relative_url }}">Experience<span class="n">07</span></a></li>
+            <li><a href="{{ '/#contact' | relative_url }}">Contact<span class="n">08</span></a></li>
+        </ul>
+    </details>
+</nav>
+{%- endif -%}
