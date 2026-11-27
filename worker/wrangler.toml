@@ -1,7 +1,7 @@
 name = "chaarangan-comments"
 main = "src/index.ts"
 compatibility_date = "2026-09-01"
-# Required by @cloudflare/vitest-pool-workers, which runs the test harness
+# Required by @cloudflare/vitest-plugin, which runs the test harness
 # itself inside workerd and needs Node built-ins to do it. The Worker code
 # below uses only web APIs, so this costs nothing at runtime.
 compatibility_flags = ["nodejs_compat"]
